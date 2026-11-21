@@ -5,9 +5,11 @@ import { PushToTalk } from './components/PushToTalk';
 import { SimulatedLedger } from './components/SimulatedLedger';
 import { PatchCollection, LedgerTransaction, VoiceInteractionResponse } from './types';
 import { Ship } from 'lucide-react';
+import { RouteComparison } from './components/RouteComparison';
+import { DryingYardSlots } from './components/DryingYardSlots';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'map' | 'ledger' | 'credibility'>('map');
+  const [activeTab, setActiveTab] = useState<'map' | 'routes' | 'forecast' | 'ledger' | 'credibility'>('map');
   const [patches, setPatches] = useState<PatchCollection | null>(null);
   const [transactions, setTransactions] = useState<LedgerTransaction[]>([]);
   const [selectedCrewId, setSelectedCrewId] = useState<string>('crew-1');
@@ -125,6 +127,20 @@ export const App: React.FC = () => {
                 selectedCrewId={selectedCrewId}
               />
             </div>
+          </div>
+        )}
+
+        {/* Routes Tab View */}
+        {activeTab === 'routes' && (
+          <div className="space-y-6">
+            <RouteComparison />
+          </div>
+        )}
+
+        {/* Forecast & Yards Tab View */}
+        {activeTab === 'forecast' && (
+          <div className="space-y-6">
+            <DryingYardSlots />
           </div>
         )}
 

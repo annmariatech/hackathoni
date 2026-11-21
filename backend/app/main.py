@@ -10,7 +10,7 @@ from pathlib import Path
 
 from backend.app.config import settings
 from backend.app.db import init_db, seed_initial_data
-from backend.app.api import health, voice, ledger, geo, forecast
+from backend.app.api import health, voice, ledger, geo, forecast, optimize
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("backend.app")
@@ -47,6 +47,7 @@ app.include_router(voice.router)
 app.include_router(ledger.router)
 app.include_router(geo.router)
 app.include_router(forecast.router)
+app.include_router(optimize.router)
 
 # Mount audio directory for streaming audio files
 AUDIO_DIR = Path(__file__).resolve().parent.parent.parent / "audio_out"

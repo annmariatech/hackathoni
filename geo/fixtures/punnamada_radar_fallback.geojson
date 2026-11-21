@@ -1,0 +1,175 @@
+{
+  "type": "FeatureCollection",
+  "metadata": {
+    "total_patches": 6,
+    "total_biomass_kg": 348500.0,
+    "source": "Sentinel-1 SAR Radar Change Detection (Fallback Fixture)",
+    "is_simulated": true,
+    "acquisition_dates": ["2024-07-12", "2024-08-05"],
+    "aoi": "Punnamada–Kainakary Corridor, Vembanad Lake"
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "patch-1",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [76.3480, 9.5030],
+            [76.3530, 9.5030],
+            [76.3530, 9.5080],
+            [76.3480, 9.5080],
+            [76.3480, 9.5030]
+          ]
+        ]
+      },
+      "properties": {
+        "patch_id": "patch-1",
+        "name": "Punnamada Jetties Choke (പുന്നമട ജെട്ടി തടസ്സം)",
+        "area_sqm": 4200.0,
+        "biomass_est_kg": 77700.0,
+        "choke_score": 0.92,
+        "growth_trend": "EXPANDING",
+        "nearest_jetty": "Punnamada Finishing Point Jetty",
+        "is_simulated": true,
+        "detected_at": "2026-11-21T18:00:00Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "patch-2",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [76.3780, 9.4970],
+            [76.3840, 9.4970],
+            [76.3840, 9.5020],
+            [76.3780, 9.5020],
+            [76.3780, 9.4970]
+          ]
+        ]
+      },
+      "properties": {
+        "patch_id": "patch-2",
+        "name": "Kainakary North Canal Bottleneck (കൈനകരി വടക്ക് തടസ്സം)",
+        "area_sqm": 3100.0,
+        "biomass_est_kg": 57350.0,
+        "choke_score": 0.88,
+        "growth_trend": "EXPANDING",
+        "nearest_jetty": "Kainakary North Ferry Jetty",
+        "is_simulated": true,
+        "detected_at": "2026-11-21T18:00:00Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "patch-3",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [76.3620, 9.4890],
+            [76.3690, 9.4890],
+            [76.3690, 9.4950],
+            [76.3620, 9.4950],
+            [76.3620, 9.4890]
+          ]
+        ]
+      },
+      "properties": {
+        "patch_id": "patch-3",
+        "name": "Kuppappuram River Junction (കുപ്പപ്പുറം നദീസംഗമം)",
+        "area_sqm": 5500.0,
+        "biomass_est_kg": 101750.0,
+        "choke_score": 0.75,
+        "growth_trend": "STABLE",
+        "nearest_jetty": "Kuppappuram Boat Jetty",
+        "is_simulated": true,
+        "detected_at": "2026-11-21T18:00:00Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "patch-4",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [76.3550, 9.4720],
+            [76.3610, 9.4720],
+            [76.3610, 9.4770],
+            [76.3550, 9.4770],
+            [76.3550, 9.4720]
+          ]
+        ]
+      },
+      "properties": {
+        "patch_id": "patch-4",
+        "name": "Pallathuruthy Bridge Channel (പള്ളാത്തുരുത്തി ചാനൽ)",
+        "area_sqm": 2800.0,
+        "biomass_est_kg": 51800.0,
+        "choke_score": 0.64,
+        "growth_trend": "RECEDING",
+        "nearest_jetty": "Pallathuruthy Bridge Jetty",
+        "is_simulated": true,
+        "detected_at": "2026-11-21T18:00:00Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "patch-5",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [76.3980, 9.4420],
+            [76.4050, 9.4420],
+            [76.4050, 9.4480],
+            [76.3980, 9.4480],
+            [76.3980, 9.4420]
+          ]
+        ]
+      },
+      "properties": {
+        "patch_id": "patch-5",
+        "name": "Nedumudi Shikkara Channel (നെടുമുടി ശിക്കാര ചാനൽ)",
+        "area_sqm": 3600.0,
+        "biomass_est_kg": 66600.0,
+        "choke_score": 0.81,
+        "growth_trend": "EXPANDING",
+        "nearest_jetty": "Nedumudi Central Jetty",
+        "is_simulated": true,
+        "detected_at": "2026-11-21T18:00:00Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "patch-6",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [76.3880, 9.5080],
+            [76.3940, 9.5080],
+            [76.3940, 9.5130],
+            [76.3880, 9.5130],
+            [76.3880, 9.5080]
+          ]
+        ]
+      },
+      "properties": {
+        "patch_id": "patch-6",
+        "name": "Kainakary South Backwater Mat (കൈനകരി തെക്ക് പാടശേഖരം)",
+        "area_sqm": 3900.0,
+        "biomass_est_kg": 72150.0,
+        "choke_score": 0.79,
+        "growth_trend": "EXPANDING",
+        "nearest_jetty": "Kainakary North Ferry Jetty",
+        "is_simulated": true,
+        "detected_at": "2026-11-21T18:00:00Z"
+      }
+    }
+  ]
+}

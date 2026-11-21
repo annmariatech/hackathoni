@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Radio, Sparkles, Database, Cpu } from 'lucide-react';
 
 interface HeaderProps {
-  activeTab: 'map' | 'ledger' | 'credibility';
-  setActiveTab: (tab: 'map' | 'ledger' | 'credibility') => void;
+  activeTab: 'map' | 'routes' | 'forecast' | 'ledger' | 'credibility';
+  setActiveTab: (tab: 'map' | 'routes' | 'forecast' | 'ledger' | 'credibility') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
@@ -93,7 +93,27 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
                 : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
             }`}
           >
-            Live Lake Map
+            Live Map
+          </button>
+          <button
+            onClick={() => setActiveTab('routes')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+              activeTab === 'routes'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+            }`}
+          >
+            Route Optimizer
+          </button>
+          <button
+            onClick={() => setActiveTab('forecast')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+              activeTab === 'forecast'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+            }`}
+          >
+            Drying & Weather
           </button>
           <button
             onClick={() => setActiveTab('ledger')}
@@ -103,7 +123,7 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
                 : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
             }`}
           >
-            Harvester Ledger
+            Ledger
           </button>
         </div>
       </div>
