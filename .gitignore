@@ -231,3 +231,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Taste skill temporary files
+.taste-skill/
+test_shot.png

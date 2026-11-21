@@ -1,17 +1,30 @@
 <!doctype html>
-<html lang="en">
+<html lang="ml" data-theme="light">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Payal-to-Pay (പായൽ) — Satellite-to-Wages Supply Chain</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>പായൽ ടു പേ (Payal-to-Pay) — Alappuzha Water Hyacinth Supply Chain</title>
     <!-- MapLibre GL CSS -->
     <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
-    <!-- Google Fonts for Malayalam & English -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Noto+Sans+Malayalam:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Self-hosted Malayalam & English Webfonts -->
+    <link rel="stylesheet" href="/fonts/fonts.css" />
+    <link rel="manifest" href="/manifest.json" />
   </head>
-  <body class="bg-slate-900 text-slate-100 antialiased font-['Manrope',sans-serif]">
+  <body class="antialiased selection:bg-[#B4532F]/20 selection:text-[#B4532F]">
+    <!-- Hidden SVG Filter for Static Ink Wobble (applied to logo and headings) -->
+    <svg width="0" height="0" class="absolute pointer-events-none" aria-hidden="true">
+      <defs>
+        <filter id="ink-wobble" x="-10%" y="-10%" width="120%" height="120%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="noise" seed="42" />
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.5" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+        <!-- Paper Fiber Noise Texture -->
+        <filter id="paper-grain" x="0%" y="0%" width="100%" height="100%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="4" stitchTiles="stitch" result="noise" />
+          <feColorMatrix type="matrix" values="0 0 0 0 0.1  0 0 0 0 0.1  0 0 0 0 0.1  0 0 0 0.05 0" />
+        </filter>
+      </defs>
+    </svg>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

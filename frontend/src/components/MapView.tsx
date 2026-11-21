@@ -1,20 +1,36 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import { PatchCollection } from '../types';
+import { BottomSheet } from './primitives/BottomSheet';
+import { Stamp } from './primitives/Stamp';
+import { InkButton } from './primitives/InkButton';
+import { IconSatellite, IconCamera } from './primitives/HandIcons';
 
 interface MapViewProps {
   patches: PatchCollection | null;
   selectedCrewId: string;
+  onVerifyPhoto?: (patchId: string, patchName: string) => void;
 }
 
-export const MapView: React.FC<MapViewProps> = ({ patches }) => {
+interface SelectedPatchProps {
+  id: string;
+  name: string;
+  choke_score: number;
+  area_sqm: number;
+  biomass_est_kg: number;
+  growth_trend: string;
+  nearest_jetty: string;
+}
+
+export const MapView: React.FC<MapViewProps> = ({ patches, selectedCrewId, onVerifyPhoto }) => {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const [selectedPatch, setSelectedPatch] = useState<SelectedPatchProps | null>(null);
 
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
 
-    // Initialize MapLibre GL
+    // Initialize MapLibre GL with clean OSM raster tiles
     const map = new maplibregl.Map({
       container: mapContainer.current,
       style: {
@@ -22,12 +38,10 @@ export const MapView: React.FC<MapViewProps> = ({ patches }) => {
         sources: {
           'osm-tiles': {
             type: 'raster',
-            tiles: [
-              'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-            ],
+            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
             tileSize: 256,
-            attribution: '&copy; OpenStreetMap contributors'
-          }
+            attribution: '&copy; OpenStreetMap contributors',
+          },
         },
         layers: [
           {
@@ -35,9 +49,9 @@ export const MapView: React.FC<MapViewProps> = ({ patches }) => {
             type: 'raster',
             source: 'osm-tiles',
             minzoom: 0,
-            maxzoom: 19
-          }
-        ]
+            maxzoom: 19,
+          },
+        ],
       },
       center: [76.368, 9.495], // Vembanad / Punnamada center
       zoom: 12.8,
@@ -57,31 +71,27 @@ export const MapView: React.FC<MapViewProps> = ({ patches }) => {
     const map = mapRef.current;
     if (!map || !patches) return;
 
-    const onLoadOrReady = () => {
+    const updateLayers = () => {
       // Split into polygons (patches) and points (boats)
-      const patchFeatures = patches.features.filter(
-        (f) => f.geometry.type === 'Polygon'
-      );
-      const boatFeatures = patches.features.filter(
-        (f) => f.geometry.type === 'Point'
-      );
+      const patchFeatures = patches.features.filter((f) => f.geometry.type === 'Polygon');
+      const boatFeatures = patches.features.filter((f) => f.geometry.type === 'Point');
 
-      // 1. Update Hyacinth Patches
+      // 1. Hyacinth Patches Source & Layers
       if (map.getSource('hyacinth-patches')) {
         (map.getSource('hyacinth-patches') as maplibregl.GeoJSONSource).setData({
           type: 'FeatureCollection',
-          features: patchFeatures as any
+          features: patchFeatures as any,
         });
       } else {
         map.addSource('hyacinth-patches', {
           type: 'geojson',
           data: {
             type: 'FeatureCollection',
-            features: patchFeatures as any
-          }
+            features: patchFeatures as any,
+          },
         });
 
-        // Patch fill
+        // Lavender Hyacinth Fill with opacity
         map.addLayer({
           id: 'patch-fills',
           type: 'fill',
@@ -90,60 +100,62 @@ export const MapView: React.FC<MapViewProps> = ({ patches }) => {
             'fill-color': [
               'step',
               ['get', 'choke_score'],
-              '#eab308', // Low choke: yellow
-              0.70, '#f97316', // Medium: orange
-              0.85, '#ef4444'  // High choke: red
+              '#8A6FD1', // Base Hyacinth purple
+              0.70, '#B4532F', // Choke Warning: Laterite
+              0.85, '#991B1B', // High Choke: Deep Red
             ],
-            'fill-opacity': 0.65
-          }
+            'fill-opacity': 0.72,
+          },
         });
 
-        // Patch border
+        // Ink Outline
         map.addLayer({
           id: 'patch-borders',
           type: 'line',
           source: 'hyacinth-patches',
           paint: {
-            'line-color': '#ffffff',
-            'line-width': 2
-          }
+            'line-color': '#1E2B24',
+            'line-width': 2.5,
+          },
         });
 
-        // Popup on click
+        // Click on patch opens authentic Backwater BottomSheet
         map.on('click', 'patch-fills', (e) => {
           if (!e.features || !e.features[0]) return;
-          const props = e.features[0].properties as any;
-          new maplibregl.Popup()
-            .setLngLat(e.lngLat)
-            .setHTML(`
-              <div style="color: #0f172a; font-family: sans-serif; padding: 4px;">
-                <h4 style="margin: 0 0 4px; font-weight: 800;">${props.name}</h4>
-                <div style="font-size: 12px; line-height: 1.4;">
-                  <div><b>Choke Score:</b> <span style="color: #dc2626; font-weight: bold;">${(props.choke_score * 100).toFixed(0)}%</span></div>
-                  <div><b>Area:</b> ${props.area_sqm} m²</div>
-                  <div><b>Est. Biomass:</b> ${(props.biomass_est_kg / 1000).toFixed(1)} tons</div>
-                  <div><b>Nearest Jetty:</b> ${props.nearest_jetty}</div>
-                  <div><b>Growth:</b> ${props.growth_trend}</div>
-                </div>
-              </div>
-            `)
-            .addTo(map);
+          const p = e.features[0].properties as any;
+          setSelectedPatch({
+            id: p.id || 'patch-1',
+            name: p.name || 'പുന്നമട കനാൽ പായൽ കൂട്ടം',
+            choke_score: Number(p.choke_score) || 0.85,
+            area_sqm: Number(p.area_sqm) || 4200,
+            biomass_est_kg: Number(p.biomass_est_kg) || 10500,
+            growth_trend: p.growth_trend || '+18% per week',
+            nearest_jetty: p.nearest_jetty || 'Punnamada Jetty',
+          });
+        });
+
+        // Cursor pointer
+        map.on('mouseenter', 'patch-fills', () => {
+          map.getCanvas().style.cursor = 'pointer';
+        });
+        map.on('mouseleave', 'patch-fills', () => {
+          map.getCanvas().style.cursor = '';
         });
       }
 
-      // 2. Update Boat Markers
+      // 2. Harvester Boat Markers
       if (map.getSource('boats-source')) {
         (map.getSource('boats-source') as maplibregl.GeoJSONSource).setData({
           type: 'FeatureCollection',
-          features: boatFeatures as any
+          features: boatFeatures as any,
         });
       } else {
         map.addSource('boats-source', {
           type: 'geojson',
           data: {
             type: 'FeatureCollection',
-            features: boatFeatures as any
-          }
+            features: boatFeatures as any,
+          },
         });
 
         map.addLayer({
@@ -152,63 +164,123 @@ export const MapView: React.FC<MapViewProps> = ({ patches }) => {
           source: 'boats-source',
           paint: {
             'circle-radius': 9,
-            'circle-color': '#10b981',
+            'circle-color': '#1F6B57', // Backwater green
             'circle-stroke-width': 3,
-            'circle-stroke-color': '#ffffff'
-          }
-        });
-
-        map.on('click', 'boat-markers', (e) => {
-          if (!e.features || !e.features[0]) return;
-          const props = e.features[0].properties as any;
-          new maplibregl.Popup()
-            .setLngLat(e.lngLat)
-            .setHTML(`
-              <div style="color: #0f172a; font-family: sans-serif; padding: 4px;">
-                <h4 style="margin: 0 0 4px; font-weight: 800;">🛶 ${props.crew_name}</h4>
-                <div style="font-size: 12px;">
-                  <div><b>Type:</b> ${props.boat_type}</div>
-                  <div><b>Capacity:</b> ${props.capacity_kg} kg</div>
-                  <div style="margin-top: 4px; color: #059669; font-weight: bold;">Active Harvester Crew</div>
-                </div>
-              </div>
-            `)
-            .addTo(map);
+            'circle-stroke-color': '#F6EEDC', // Kasavu paper
+          },
         });
       }
     };
 
     if (map.isStyleLoaded()) {
-      onLoadOrReady();
+      updateLayers();
     } else {
-      map.once('load', onLoadOrReady);
+      map.once('load', updateLayers);
     }
   }, [patches]);
 
   return (
-    <div className="relative w-full h-[540px] rounded-2xl overflow-hidden border border-slate-800 shadow-2xl">
+    <div className="relative w-full h-[520px] rounded-2xl overflow-hidden border-2 border-[var(--ink)] shadow-2xl bg-[var(--paper-2)]">
+      {/* Map Container */}
       <div ref={mapContainer} className="w-full h-full" />
 
-      {/* Floating Legend */}
-      <div className="absolute bottom-4 left-4 bg-slate-900/90 backdrop-blur-md border border-slate-800 p-3 rounded-xl text-xs space-y-1.5 shadow-xl">
-        <div className="font-bold text-white mb-1">Radar Choke Legend (Sentinel-1)</div>
-        <div className="flex items-center gap-2">
-          <span className="w-3.5 h-3.5 rounded bg-red-500"></span>
-          <span className="text-slate-300">High Choke (&gt;85% Route Blockage)</span>
+      {/* Floating Legend Badge */}
+      <div className="absolute top-3 left-3 z-10 bg-[var(--paper)]/95 backdrop-blur-sm border-2 border-[var(--ink)] rounded-xl p-2.5 shadow-[2px_3px_0px_var(--ink)] text-xs font-display space-y-1.5 max-w-[210px]">
+        <div className="flex items-center justify-between gap-2 border-b border-[var(--ink)]/20 pb-1">
+          <span className="font-bold flex items-center gap-1 text-[var(--ink)]">
+            <IconSatellite size={16} />
+            <span>റഡാർ പായൽ ഭൂപടം</span>
+          </span>
+          <Stamp type="verified" size="sm" />
         </div>
-        <div className="flex items-center gap-2">
-          <span className="w-3.5 h-3.5 rounded bg-orange-500"></span>
-          <span className="text-slate-300">Moderate Choke (70–85%)</span>
+        <div className="flex items-center gap-2 text-[11px] font-ui">
+          <span className="w-3.5 h-3.5 rounded bg-[#8A6FD1] border border-[var(--ink)]" />
+          <span>സാധാരണ പായൽ (Patch)</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="w-3.5 h-3.5 rounded bg-yellow-500"></span>
-          <span className="text-slate-300">Low Choke (&lt;70%)</span>
+        <div className="flex items-center gap-2 text-[11px] font-ui">
+          <span className="w-3.5 h-3.5 rounded bg-[#B4532F] border border-[var(--ink)]" />
+          <span>കനാൽ തടസ്സം (Choke Point)</span>
         </div>
-        <div className="flex items-center gap-2 pt-1 border-t border-slate-800">
-          <span className="w-3 h-3 rounded-full bg-emerald-500 border border-white"></span>
-          <span className="text-slate-300">Active Country Boat (Vanchi)</span>
+        <div className="flex items-center gap-2 text-[11px] font-ui">
+          <span className="w-3.5 h-3.5 rounded-full bg-[#1F6B57] border-2 border-white" />
+          <span>ശേഖരണ വള്ളം ({selectedCrewId})</span>
         </div>
       </div>
+
+      {/* Patch Details BottomSheet */}
+      <BottomSheet
+        isOpen={!!selectedPatch}
+        onClose={() => setSelectedPatch(null)}
+        title={selectedPatch?.name || 'പായൽ വിവരങ്ങൾ'}
+        subtitle={`വേമ്പനാട്ട് കായൽ · സെന്റിനൽ-1 SAR വഴി കണ്ടെത്തിയത്`}
+      >
+        {selectedPatch && (
+          <div className="space-y-4">
+            {/* Stamp Animation */}
+            <div className="flex items-center justify-between bg-[var(--paper-2)] p-3 rounded-xl border border-[var(--ink)]/30">
+              <div>
+                <span className="text-[10px] font-mono text-[var(--ink-soft)] uppercase block">
+                  സാറ്റലൈറ്റ് പരിശോധന നില
+                </span>
+                <span className="font-display font-bold text-sm text-[var(--ink)]">
+                  Sentinel-1 SAR Detection Confirmed
+                </span>
+              </div>
+              <div className="transform -rotate-6 transition-transform">
+                <Stamp type="verified" size="md" />
+              </div>
+            </div>
+
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-2 gap-2 text-xs font-ui">
+              <div className="p-3 bg-[var(--paper-2)] rounded-xl border border-[var(--ink)]/20">
+                <span className="text-[10px] text-[var(--ink-soft)] block">തടസ്സ തോത് (Choke Score):</span>
+                <b className="font-display text-lg text-[var(--laterite)]">
+                  {(selectedPatch.choke_score * 100).toFixed(0)}%
+                </b>
+              </div>
+              <div className="p-3 bg-[var(--paper-2)] rounded-xl border border-[var(--ink)]/20">
+                <span className="text-[10px] text-[var(--ink-soft)] block">വിസ്തീർണ്ണം (Area):</span>
+                <b className="font-mono text-lg text-[var(--ink)]">
+                  {selectedPatch.area_sqm.toLocaleString()} m²
+                </b>
+              </div>
+              <div className="p-3 bg-[var(--paper-2)] rounded-xl border border-[var(--ink)]/20">
+                <span className="text-[10px] text-[var(--ink-soft)] block">കണക്കാക്കിയ ഭാരം (Biomass):</span>
+                <b className="font-display text-lg text-[var(--backwater)]">
+                  {(selectedPatch.biomass_est_kg / 1000).toFixed(1)} tons
+                </b>
+              </div>
+              <div className="p-3 bg-[var(--paper-2)] rounded-xl border border-[var(--ink)]/20">
+                <span className="text-[10px] text-[var(--ink-soft)] block">അടുത്തുള്ള ജെട്ടി (Jetty):</span>
+                <b className="font-ui text-xs text-[var(--ink)] block truncate">
+                  {selectedPatch.nearest_jetty}
+                </b>
+              </div>
+            </div>
+
+            {/* Action to Verify via Photo */}
+            {onVerifyPhoto && (
+              <div className="pt-2">
+                <InkButton
+                  variant="primary"
+                  fullWidth
+                  onClick={() => {
+                    const p = selectedPatch;
+                    setSelectedPatch(null);
+                    onVerifyPhoto(p.id, p.name);
+                  }}
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    <IconCamera size={18} />
+                    <span>ഫോട്ടോ വഴി ശേഖരണം സ്ഥിരീകരിക്കുക (Verify Photo)</span>
+                  </span>
+                </InkButton>
+              </div>
+            )}
+          </div>
+        )}
+      </BottomSheet>
     </div>
   );
 };

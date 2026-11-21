@@ -1,139 +1,159 @@
-import React, { useEffect, useState } from 'react';
-import { Radio, Sparkles, Database, Cpu } from 'lucide-react';
+import React from 'react';
+import { KasavuBorder } from './primitives/KasavuBorder';
+import { Stamp } from './primitives/Stamp';
+import { Sun, Moon, BookOpen, Palette } from 'lucide-react';
+
+export type MainTab = 'today' | 'map' | 'speak' | 'wages' | 'dashboard';
 
 interface HeaderProps {
-  activeTab: 'map' | 'routes' | 'forecast' | 'ledger' | 'credibility';
-  setActiveTab: (tab: 'map' | 'routes' | 'forecast' | 'ledger' | 'credibility') => void;
+  activeTab: MainTab;
+  onSelectTab: (tab: MainTab) => void;
+  onOpenStory: () => void;
+  onOpenKit: () => void;
+  isDark: boolean;
+  onToggleTheme: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
-  const [credits, setCredits] = useState<{
-    total_stt_seconds: number;
-    total_tts_chars: number;
-    cached_audio_hits: number;
-  }>({ total_stt_seconds: 0, total_tts_chars: 0, cached_audio_hits: 0 });
-
-  useEffect(() => {
-    const fetchCredits = async () => {
-      try {
-        const res = await fetch('/api/v1/voice/credits');
-        if (res.ok) {
-          const data = await res.json();
-          setCredits(data);
-        }
-      } catch (e) {
-        // quiet error on dev
-      }
-    };
-    fetchCredits();
-    const interval = setInterval(fetchCredits, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
+export const Header: React.FC<HeaderProps> = ({
+  activeTab,
+  onSelectTab,
+  onOpenStory,
+  onOpenKit,
+  isDark,
+  onToggleTheme,
+}) => {
   return (
-    <header className="bg-slate-900 border-b border-slate-800 px-4 py-3 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
-        {/* Brand */}
+    <header className="sticky top-0 z-40 bg-[var(--paper)] text-[var(--ink)] border-b-2 border-[var(--ink)]/40 shadow-sm transition-colors">
+      {/* Top Kasavu Border */}
+      <KasavuBorder />
+
+      {/* Main Header Row */}
+      <div className="max-w-7xl mx-auto px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
+        {/* Brand & Subtitle */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-sky-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-            <Radio className="w-5 h-5 text-white animate-pulse" />
-          </div>
-          <div>
+          <button
+            onClick={() => onSelectTab('today')}
+            className="text-left select-none hover:opacity-90 transition"
+          >
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
-                Payal-to-Pay <span className="font-['Noto_Sans_Malayalam'] text-emerald-400">പായൽ</span>
-              </h1>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                Alappuzha Live
+              <span className="font-display font-black text-xl text-[var(--ink)] tracking-tight">
+                പായൽ ടു പേ
               </span>
+              <span className="font-display text-xs text-[var(--laterite)] font-bold hidden sm:inline">
+                Payal-to-Pay
+              </span>
+              <Stamp type="simulated" size="sm" />
             </div>
-            <p className="text-xs text-slate-400">
-              Satellite-to-Wages Water Hyacinth Supply Chain & Malayalam Voice Desk
-            </p>
-          </div>
+            <span className="text-[10px] text-[var(--ink-soft)] font-ui block">
+              വേമ്പനാട്ട് കായൽ ഉപഗ്രഹ-കൂലി വിതരണ ശൃംഖല · Alappuzha
+            </span>
+          </button>
         </div>
 
         {/* Data Honesty Badges */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-950/80 border border-emerald-600/30 text-emerald-300 font-medium">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-            <span>[REAL] Sentinel-1 SAR</span>
-          </div>
-
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-950/80 border border-emerald-600/30 text-emerald-300 font-medium">
-            <Cpu className="w-3.5 h-3.5 text-emerald-400" />
-            <span>[REAL] Sarvam Voice</span>
-          </div>
-
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-950/80 border border-amber-600/30 text-amber-300 font-medium">
-            <Database className="w-3.5 h-3.5 text-amber-400" />
-            <span>[SIMULATED] Wages & Ledger</span>
-          </div>
-
-          {/* Credit Usage Counter */}
-          <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-300">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Sarvam:</span>
-            <span className="font-mono text-emerald-400 font-bold">{credits.total_stt_seconds}s</span> STT
-            <span>·</span>
-            <span className="font-mono text-sky-400 font-bold">{credits.total_tts_chars}</span> chars
-            {credits.cached_audio_hits > 0 && (
-              <span className="text-xs text-emerald-400/80">({credits.cached_audio_hits} cached)</span>
-            )}
-          </div>
+        <div className="hidden lg:flex items-center gap-2 text-[10px] font-mono">
+          <span className="px-2 py-0.5 rounded bg-[var(--backwater)]/10 text-[var(--backwater)] border border-[var(--backwater)]/30 font-bold">
+            [REAL] Sentinel-1 SAR
+          </span>
+          <span className="px-2 py-0.5 rounded bg-[var(--laterite)]/10 text-[var(--laterite)] border border-[var(--laterite)]/30 font-bold">
+            [REAL] Sarvam Saaras & Bulbul
+          </span>
+          <span className="px-2 py-0.5 rounded bg-[var(--sun)]/20 text-black border border-[var(--sun)] font-bold">
+            [SIMULATED] Wages & Ledger
+          </span>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-1 bg-slate-800/80 p-1 rounded-lg border border-slate-700">
+        {/* Action Controls & Navigation */}
+        <div className="flex items-center gap-2">
+          {/* Story for Judges */}
           <button
-            onClick={() => setActiveTab('map')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+            onClick={onOpenStory}
+            className="px-2.5 py-1.5 rounded-lg border-2 border-[var(--ink)] bg-[var(--paper-2)] hover:bg-[var(--paper)] text-xs font-display font-bold text-[var(--ink)] flex items-center gap-1.5 transition shadow-[1px_2px_0px_var(--ink)] tap-target-48"
+            title="Open 4-Chapter Project Story"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-[var(--laterite)]" />
+            <span className="hidden sm:inline">കഥ ·</span>
+            <span>Story</span>
+          </button>
+
+          {/* Component Kit Link */}
+          <button
+            onClick={onOpenKit}
+            className="px-2.5 py-1.5 rounded-lg border border-[var(--ink)]/40 bg-[var(--paper-2)] hover:bg-[var(--paper)] text-xs font-display text-[var(--ink)] flex items-center gap-1 transition tap-target-48"
+            title="View Component Kit"
+          >
+            <Palette className="w-3.5 h-3.5 text-[var(--backwater)]" />
+            <span>/kit</span>
+          </button>
+
+          {/* Day / Night Lamp Toggle */}
+          <button
+            onClick={onToggleTheme}
+            className="px-2.5 py-1.5 rounded-lg border border-[var(--ink)] bg-[var(--paper-2)] hover:bg-[var(--paper)] text-xs font-display flex items-center gap-1.5 transition tap-target-48"
+            aria-label="Toggle Night Lamp Mode"
+          >
+            {isDark ? (
+              <Sun className="w-4 h-4 text-[var(--sun)]" />
+            ) : (
+              <Moon className="w-4 h-4 text-[var(--ink)]" />
+            )}
+            <span className="hidden sm:inline">{isDark ? 'Day' : 'Night'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Desktop Navigation Tabs (Hidden on mobile where bottom TabBar takes over) */}
+      <div className="hidden md:block border-t border-[var(--ink)]/20 bg-[var(--paper-2)]/50">
+        <div className="max-w-7xl mx-auto px-4 flex items-center gap-1 text-xs font-display font-bold">
+          <button
+            onClick={() => onSelectTab('today')}
+            className={`py-2 px-3 border-b-2 transition ${
+              activeTab === 'today'
+                ? 'border-[var(--laterite)] text-[var(--laterite)]'
+                : 'border-transparent text-[var(--ink-soft)] hover:text-[var(--ink)]'
+            }`}
+          >
+            ഇന്ന് Today
+          </button>
+          <button
+            onClick={() => onSelectTab('map')}
+            className={`py-2 px-3 border-b-2 transition ${
               activeTab === 'map'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                ? 'border-[var(--laterite)] text-[var(--laterite)]'
+                : 'border-transparent text-[var(--ink-soft)] hover:text-[var(--ink)]'
             }`}
           >
-            Live Map
+            ഭൂപടം Map
           </button>
           <button
-            onClick={() => setActiveTab('routes')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-              activeTab === 'routes'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+            onClick={() => onSelectTab('speak')}
+            className={`py-2 px-3 border-b-2 transition ${
+              activeTab === 'speak'
+                ? 'border-[var(--laterite)] text-[var(--laterite)]'
+                : 'border-transparent text-[var(--ink-soft)] hover:text-[var(--ink)]'
             }`}
           >
-            Route Optimizer
+            പറയൂ Speak (Sarvam)
           </button>
           <button
-            onClick={() => setActiveTab('forecast')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-              activeTab === 'forecast'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+            onClick={() => onSelectTab('wages')}
+            className={`py-2 px-3 border-b-2 transition ${
+              activeTab === 'wages'
+                ? 'border-[var(--laterite)] text-[var(--laterite)]'
+                : 'border-transparent text-[var(--ink-soft)] hover:text-[var(--ink)]'
             }`}
           >
-            Drying & Weather
+            കൂലി Wages
           </button>
           <button
-            onClick={() => setActiveTab('ledger')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-              activeTab === 'ledger'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+            onClick={() => onSelectTab('dashboard')}
+            className={`py-2 px-3 border-b-2 transition ${
+              activeTab === 'dashboard'
+                ? 'border-[var(--laterite)] text-[var(--laterite)]'
+                : 'border-transparent text-[var(--ink-soft)] hover:text-[var(--ink)]'
             }`}
           >
-            Ledger
-          </button>
-          <button
-            onClick={() => setActiveTab('credibility')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-              activeTab === 'credibility'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-            }`}
-          >
-            Credibility Panel
+            ഡാഷ്‌ബോർഡ് Dashboard
           </button>
         </div>
       </div>
