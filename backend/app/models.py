@@ -103,7 +103,7 @@ class VoiceInteractionResponse(BaseModel):
 
 class SpeakRequest(BaseModel):
     text: str
-    speaker: str = "meera"
+    speaker: str = "pooja"
 
 
 # --- Ledger & Payments ---

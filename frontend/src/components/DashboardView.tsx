@@ -108,9 +108,6 @@ export const DashboardView: React.FC = () => {
             <h2 className="font-display font-extrabold text-2xl text-[var(--ink)] mt-0.5">
               സപ്ലൈ ചെയിൻ ഓപ്റ്റിമൈസേഷൻ & ക്രെഡിബിലിറ്റി
             </h2>
-            <p className="font-ui text-xs text-[var(--ink-soft)] mt-0.5">
-              OR-Tools റൂട്ടിംഗ് ലാഭം, വേമ്പനാട് റഡാർ മാറ്റം, സർവ്വം സ്പീച്ച് മോഡൽ കൃത്യത
-            </p>
           </div>
 
           {/* Sarvam Credit Counter */}
@@ -314,9 +311,6 @@ export const DashboardView: React.FC = () => {
               </span>
               <Stamp type="verified" size="sm" />
             </div>
-            <p className="font-ui text-xs text-[var(--ink-soft)]">
-              കൈകൊണ്ട് അടയാളപ്പെടുത്തിയ ഗ്രൗണ്ട്-ട്രൂത്ത് പായൽ പോളിഗണുകളുമായി താരതമ്യം ചെയ്ത ഫലം:
-            </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center font-mono">
               <div className="p-2.5 bg-[var(--paper-2)] border border-[var(--ink)]/30 rounded-lg">
                 <span className="text-[9px] text-[var(--ink-soft)] block uppercase">IoU Score</span>
@@ -354,9 +348,6 @@ export const DashboardView: React.FC = () => {
               </span>
               <Stamp type="verified" size="sm" />
             </div>
-            <p className="font-ui text-xs text-[var(--ink-soft)]">
-              വേമ്പനാട് കായൽ ശൈലിയിലുള്ള 20 യഥാർത്ഥ ഓഡിയോ ക്ലിപ്പുകളിൽ നടത്തിയ പരിശോധന:
-            </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center font-mono">
               <div className="p-2.5 bg-[var(--paper-2)] border border-[var(--ink)]/30 rounded-lg">
                 <span className="text-[9px] text-[var(--ink-soft)] block uppercase">Word Error Rate</span>

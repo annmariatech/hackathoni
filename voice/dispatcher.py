@@ -105,6 +105,8 @@ class VoiceDispatcher:
     async def process_interaction(
         self,
         audio_bytes: Optional[bytes] = None,
+        audio_filename: str = "recording.wav",
+        audio_content_type: str = "audio/wav",
         text_input: Optional[str] = None,
         crew_id: str = "crew-1",
         state_executor: Optional[Any] = None,
@@ -115,7 +117,11 @@ class VoiceDispatcher:
         """
         # Step 1: STT or Text Input
         if audio_bytes and len(audio_bytes) > 0:
-            transcript = await self.client.speech_to_text(audio_bytes)
+            transcript = await self.client.speech_to_text(
+                audio_bytes,
+                filename=audio_filename,
+                content_type=audio_content_type,
+            )
         elif text_input:
             transcript = text_input.strip()
         else:
@@ -127,16 +133,18 @@ class VoiceDispatcher:
             {"role": "user", "content": f"ഹാർവെസ്റ്റർ ക്രൂ: {crew_id}\nസന്ദേശം: {transcript}"}
         ]
 
+        dispatcher_model = "sarvam-105b-conversations"
         llm_response = await self.client.chat_completion(
             messages=messages,
             tools=DISPATCHER_TOOLS,
-            model="sarvam-30b"
+            model=dispatcher_model
         )
 
         choice = llm_response.get("choices", [{}])[0].get("message", {})
         tool_calls = choice.get("tool_calls", [])
 
         executed_tools = []
+        tool_result_messages = []
         dispatcher_reply = ""
         intent = "GENERAL_QUERY"
 
@@ -160,33 +168,54 @@ class VoiceDispatcher:
                     else:
                         result = {"status": "SUCCESS", "slot_allocated": "Kainakary North Yard", "payout_staged_inr": weight * 3.5}
 
-                    dispatcher_reply = f"നന്ദി. {weight} കിലോ പായൽ വിജയകരമായി രേഖപ്പെടുത്തി. അടുത്ത മഴയ്ക്ക് മുൻപായി കൈനകരി ഒന്നാം നമ്പർ യാർഡിലേക്ക് എത്തിക്കുക. സ്ലോട്ട് ബുക്ക് ചെയ്തിട്ടുണ്ട്."
-
                 elif fn_name == "get_next_destination":
                     intent = "GET_ASSIGNMENT"
                     if state_executor:
                         result = state_executor.get_assignment(crew_id=crew_id)
                     else:
                         result = {"destination": "Patch-4 (Punnamada Choke)", "eta": "25 mins"}
-                    dispatcher_reply = "നിങ്ങളുടെ അടുത്ത ലക്ഷ്യം പുന്നമട ഫിനിഷിംഗ് പോയിന്റിലെ പായൽ തടസ്സമാണ്. വഴി മാപ്പിൽ അടയാളപ്പെടുത്തിയിട്ടുണ്ട്."
-
                 elif fn_name == "check_yard_slot":
                     intent = "CHECK_YARD_SLOT"
-                    dispatcher_reply = "കൈനകരി യാർഡിൽ 400 ചതുരശ്ര മീറ്റർ ഡ്രൈയിംഗ് സ്പേസ് ലഭ്യമാണ്. മഴ സാധ്യത കുറവാണ്."
                     result = {"available_sqm": 400}
+
+                else:
+                    result = {"error": "Unknown dispatcher tool"}
 
                 executed_tools.append({
                     "tool_name": fn_name,
                     "arguments": args,
                     "result": result
                 })
+                tool_result_messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc.get("id", f"tool_{len(tool_result_messages)}"),
+                    "content": json.dumps(result, ensure_ascii=False, default=str),
+                })
+
+            # Give the dispatcher the actual tool results so it can answer from live state.
+            messages.append({
+                "role": "assistant",
+                "content": choice.get("content"),
+                "tool_calls": tool_calls,
+            })
+            messages.extend(tool_result_messages)
+            try:
+                final_response = await self.client.chat_completion(
+                    messages=messages,
+                    model=dispatcher_model,
+                )
+                final_choice = final_response.get("choices", [{}])[0].get("message", {})
+                dispatcher_reply = final_choice.get("content") or "ശരി, നിങ്ങളുടെ റിപ്പോർട്ട് ലഭിച്ചു. കൂടുതൽ വിവരങ്ങൾ സ്ക്രീനിൽ പരിശോധിക്കുക."
+            except Exception:
+                logger.warning("Sarvam follow-up completion failed; using a short fallback reply")
+                dispatcher_reply = "ശരി, നിങ്ങളുടെ റിപ്പോർട്ട് ലഭിച്ചു. കൂടുതൽ വിവരങ്ങൾ സ്ക്രീനിൽ പരിശോധിക്കുക."
         else:
             dispatcher_reply = choice.get("content") or "ശരി, നിങ്ങളുടെ സന്ദേശം ലഭിച്ചു. കൂടുതൽ വിവരങ്ങൾ മാപ്പിൽ പരിശോധിക്കുക."
 
         # Step 3: Malayalam TTS Synthesis
         tts_audio = await self.client.text_to_speech(
             text=dispatcher_reply,
-            speaker="meera",
+            speaker="pooja",
             model="bulbul:v3"
         )
 

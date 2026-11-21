@@ -25,7 +25,7 @@ export const TabBar: React.FC<TabBarProps> = ({
       className={`fixed bottom-0 left-0 right-0 z-40 bg-[var(--paper)] border-t-2 border-[var(--ink)] px-2 pt-2 pb-safe safe-pb shadow-[0_-4px_12px_rgba(0,0,0,0.08)] ${className}`}
       aria-label="Navigation Bar"
     >
-      <div className="max-w-md mx-auto flex items-center justify-around relative">
+      <div className="max-w-md mx-auto flex items-center justify-center gap-4 relative">
         {/* 1. ഇന്ന് Today */}
         <button
           type="button"

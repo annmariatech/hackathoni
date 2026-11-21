@@ -118,7 +118,7 @@ paths:
               required: [text]
               properties:
                 text: { type: string }
-                speaker: { type: string, default: "meera" }
+                speaker: { type: string, default: "pooja" }
       responses:
         '200':
           description: Audio bytes or URL

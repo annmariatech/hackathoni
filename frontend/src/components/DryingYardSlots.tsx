@@ -46,9 +46,6 @@ export const DryingYardSlots: React.FC = () => {
             <CloudRain className="w-4 h-4 text-sky-400" />
             Open-Meteo Drying Forecast & Yard Slots
           </h2>
-          <p className="text-xs text-slate-400">
-            Prevents harvest spoilage by coordinating solar drying windows with community drying yard capacities
-          </p>
         </div>
       </div>
 

@@ -25,9 +25,6 @@ export const SimulatedLedger: React.FC<SimulatedLedgerProps> = ({ transactions }
               SIMULATED LEDGER
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Cryptographically chained wage payments released upon harvest report and geotag verification
-          </p>
         </div>
 
         {/* Aggregates */}

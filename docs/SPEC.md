@@ -132,7 +132,7 @@ All endpoints adhere to `contracts/openapi.yaml`.
 
 ### 5.4 Module 4: VOICE DESK (Sarvam AI)
 - ASR: Saaras (`ml-IN` codemix) transcribing Malayalam speech.
-- Dispatcher: `sarvam-30b` or `sarvam-105b` tool-calling LLM.
+- Dispatcher: `sarvam-105b-conversations` for voice dialogue or `sarvam-105b` for complex reasoning. `sarvam-30b` and `sarvam-m` are deprecated.
 - TTS: Bulbul v3 (`bulbul:v3`) generating spoken Malayalam.
 - Disk caching for fixed audio phrases using SHA-256 hash.
 - Full credit usage tracking (characters, audio seconds).

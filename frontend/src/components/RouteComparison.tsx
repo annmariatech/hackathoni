@@ -94,9 +94,6 @@ export const RouteComparison: React.FC = () => {
               SOLVER: CVRPTW
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Optimizes choke-point clearance, yard drop-off time windows, and boat payload limits
-          </p>
         </div>
 
         <button

@@ -4,18 +4,63 @@ Handles geotagged before/after photo EXIF verification, simulated satellite revi
 and stretch Sarvam Document AI collector register digitization.
 """
 import io
+import asyncio
+import json
 import time
 import math
 import hashlib
+import mimetypes
+import os
 from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+import httpx
 from PIL import Image, ExifTags
 
+from backend.app.config import settings
 from backend.app.db import get_db_connection
 from geo.optimizer import haversine_distance_km
 
 router = APIRouter(prefix="/api/v1/verify", tags=["Verification & Proof of Harvest"])
+
+SARVAM_API_BASE_URL = "https://api.sarvam.ai"
+SARVAM_VISION_MODEL = "sarvam-vision-v1"
+DOC_AI_TERMINAL_STATUSES = {"completed", "partially_completed", "failed", "rejected"}
+REGISTER_EXTRACTION_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "rows": {
+            "type": "array",
+            "description": "Harvest entries, with one object for each handwritten table row.",
+            "items": {
+                "type": "object",
+                "description": "One collector register entry.",
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "description": "Date written for this harvest entry, preserving the written value if unclear.",
+                    },
+                    "boat_no": {
+                        "type": "string",
+                        "description": "Boat registration number written in this row.",
+                    },
+                    "harvester": {
+                        "type": "string",
+                        "description": "Collector or harvester name written in this row.",
+                    },
+                    "location": {
+                        "type": "string",
+                        "description": "Collection location or jetty written in this row.",
+                    },
+                    "weight_kg": {
+                        "type": "number",
+                        "description": "Harvest weight in kilograms, using the numeric value written in this row.",
+                    },
+                },
+            },
+        }
+    },
+}
 
 
 def extract_exif_gps(image_bytes: bytes) -> Optional[tuple[float, float]]:
@@ -162,18 +207,127 @@ async def verify_handwritten_register(
     photo: UploadFile = File(...)
 ):
     """
-    Stretch: Sarvam Document AI / OCR to digitize physical handwritten harvester registers.
+    Extracts structured harvest rows from a collector register with Sarvam Document AI.
+    Returned values require human review because handwriting accuracy has not been validated.
     """
-    # Simulated Sarvam Document AI digitization
+    api_key = settings.SARVAM_API_KEY or os.getenv("SARVAM_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=503, detail="SARVAM_API_KEY is not configured")
+
+    filename = photo.filename or "collector-register"
+    media_type = photo.content_type or mimetypes.guess_type(filename)[0] or ""
+    if media_type == "image/jpg":
+        media_type = "image/jpeg"
+    allowed_media_types = {
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "image/tiff",
+        "image/x-tiff",
+    }
+    if media_type not in allowed_media_types:
+        raise HTTPException(
+            status_code=415,
+            detail="Upload a PDF, JPEG, PNG, or TIFF collector register.",
+        )
+
+    document_bytes = await photo.read()
+    if not document_bytes:
+        raise HTTPException(status_code=400, detail="The uploaded register is empty.")
+
+    headers = {"api-subscription-key": api_key}
+    endpoint = f"{SARVAM_API_BASE_URL}/doc-ai/v1/job/extract"
+
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
+            submit = await client.post(
+                endpoint,
+                headers=headers,
+                files={"file": (filename, document_bytes, media_type)},
+                data={
+                    "schema": json.dumps(REGISTER_EXTRACTION_SCHEMA, ensure_ascii=False),
+                    "language": "ml-IN",
+                    "output_format": "json",
+                    "mode": "basic",
+                    "model": SARVAM_VISION_MODEL,
+                },
+            )
+            if not submit.is_success:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Sarvam Document AI could not start extraction (HTTP {submit.status_code}).",
+                )
+
+            job_id = submit.json().get("job_id")
+            if not job_id:
+                raise HTTPException(status_code=502, detail="Sarvam Document AI did not return a job ID.")
+
+            deadline = time.monotonic() + 60
+            while True:
+                status_response = await client.get(
+                    f"{SARVAM_API_BASE_URL}/doc-ai/v1/job/{job_id}/status",
+                    headers=headers,
+                )
+                if not status_response.is_success:
+                    raise HTTPException(
+                        status_code=502,
+                        detail=f"Sarvam Document AI status check failed (HTTP {status_response.status_code}).",
+                    )
+
+                job_status = status_response.json().get("status", "").lower()
+                if job_status in DOC_AI_TERMINAL_STATUSES:
+                    break
+                if time.monotonic() >= deadline:
+                    raise HTTPException(
+                        status_code=504,
+                        detail={"message": "Register extraction is still processing.", "job_id": job_id},
+                    )
+                await asyncio.sleep(2)
+
+            if job_status in {"failed", "rejected"}:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Sarvam Document AI extraction ended with status {job_status}.",
+                )
+
+            results_response = await client.get(
+                f"{SARVAM_API_BASE_URL}/doc-ai/v1/job/{job_id}/results",
+                headers=headers,
+                params={"format": "json"},
+            )
+            if not results_response.is_success:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Sarvam Document AI results fetch failed (HTTP {results_response.status_code}).",
+                )
+    except httpx.TimeoutException as exc:
+        raise HTTPException(status_code=504, detail="Sarvam Document AI request timed out.") from exc
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail="Could not reach Sarvam Document AI.") from exc
+
+    results = results_response.json()
+    extracted = results.get("result") or {}
+    rows = extracted.get("rows", []) if isinstance(extracted, dict) else []
+    if not isinstance(rows, list):
+        rows = []
+
+    weights = [
+        row["weight_kg"]
+        for row in rows
+        if isinstance(row, dict)
+        and isinstance(row.get("weight_kg"), (int, float))
+        and not isinstance(row.get("weight_kg"), bool)
+    ]
+    total_kg = round(sum(weights), 2) if weights else None
+
     return {
-        "status": "DIGITIZED",
-        "model": "sarvam-doc-ai-v1",
-        "entries_found": 3,
-        "rows": [
-            {"date": "2026-11-21", "boat_no": "KL-04-V-102", "harvester": "ലീല (Leela)", "weight_kg": 380, "signature": "Verified"},
-            {"date": "2026-11-21", "boat_no": "KL-04-V-205", "harvester": "അനിത (Anitha)", "weight_kg": 420, "signature": "Verified"},
-            {"date": "2026-11-21", "boat_no": "KL-04-V-089", "harvester": "ഷീല (Sheela)", "weight_kg": 310, "signature": "Verified"}
-        ],
-        "total_kg": 1110,
-        "is_simulated": True
+        "status": "DIGITIZED" if job_status == "completed" else "PARTIALLY_DIGITIZED",
+        "job_id": job_id,
+        "model": SARVAM_VISION_MODEL,
+        "entries_found": len(rows),
+        "rows": rows,
+        "total_kg": total_kg,
+        "annotations": results.get("annotations", {}),
+        "review_required": True,
+        "is_simulated": False,
     }

@@ -24,25 +24,25 @@ class AudioCacheManager:
         raw = f"{model}:{speaker}:{clean_text}"
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
-    def get_audio(self, text: str, speaker: str = "meera", model: str = "bulbul:v3") -> Optional[bytes]:
+    def get_audio(self, text: str, speaker: str = "pooja", model: str = "bulbul:v3") -> Optional[bytes]:
         key = self._get_key(text, speaker, model)
         file_path = self.cache_dir / f"{key}.wav"
         if file_path.exists():
             return file_path.read_bytes()
         return None
 
-    def put_audio(self, text: str, audio_bytes: bytes, speaker: str = "meera", model: str = "bulbul:v3") -> str:
+    def put_audio(self, text: str, audio_bytes: bytes, speaker: str = "pooja", model: str = "bulbul:v3") -> str:
         key = self._get_key(text, speaker, model)
         file_path = self.cache_dir / f"{key}.wav"
         file_path.write_bytes(audio_bytes)
         return str(file_path)
 
-    def has(self, text: str, speaker: str = "meera", model: str = "bulbul:v3") -> bool:
+    def has(self, text: str, speaker: str = "pooja", model: str = "bulbul:v3") -> bool:
         key = self._get_key(text, speaker, model)
         file_path = self.cache_dir / f"{key}.wav"
         return file_path.exists()
 
-    def get_cached_path(self, text: str, speaker: str = "meera", model: str = "bulbul:v3") -> Optional[str]:
+    def get_cached_path(self, text: str, speaker: str = "pooja", model: str = "bulbul:v3") -> Optional[str]:
         key = self._get_key(text, speaker, model)
         file_path = self.cache_dir / f"{key}.wav"
         if file_path.exists():

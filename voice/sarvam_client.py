@@ -1,6 +1,6 @@
 """
 Payal-to-Pay — Sarvam AI Async Client Wrapper
-Wraps Saaras STT, Bulbul v3 TTS, and sarvam-30b/105b Chat Completions with tool-calling.
+Wraps Saaras v4 STT, Bulbul v3 TTS, and Sarvam-105B Conversations with tool-calling.
 Never exposes API key to client; tracks all credit usage and leverages disk audio cache.
 """
 import os
@@ -9,6 +9,7 @@ import logging
 from typing import Optional, Dict, Any, List
 import httpx
 
+from backend.app.config import settings
 from voice.credit_tracker import usage_tracker
 from voice.cache_manager import audio_cache
 
@@ -17,7 +18,9 @@ logger = logging.getLogger("voice.sarvam_client")
 
 class SarvamClient:
     def __init__(self, api_key: Optional[str] = None, base_url: str = "https://api.sarvam.ai"):
-        self.api_key = api_key or os.getenv("SARVAM_API_KEY", "")
+        self.api_key = api_key if api_key is not None else (
+            os.getenv("SARVAM_API_KEY") or settings.SARVAM_API_KEY or ""
+        )
         self.base_url = base_url.rstrip("/")
         self.headers = {
             "api-subscription-key": self.api_key,
@@ -31,12 +34,14 @@ class SarvamClient:
         self,
         audio_bytes: bytes,
         filename: str = "recording.wav",
-        model: str = "saaras:v3",
+        model: str = "saaras:v4",
         language_code: str = "ml-IN",
         approx_duration_sec: float = 3.0,
+        mode: str = "codemix",
+        content_type: str = "audio/wav",
     ) -> str:
         """
-        Transcribes Malayalam audio to text using Saaras.
+        Transcribes Malayalam audio to text using Saaras v4.
         Supports Malayalam-English code-mixing (numbers, jetty, kg).
         """
         if not self.is_configured:
@@ -44,12 +49,12 @@ class SarvamClient:
 
         url = f"{self.base_url}/speech-to-text"
         files = {
-            "file": (filename, audio_bytes, "audio/wav")
+            "file": (filename, audio_bytes, content_type.split(";", 1)[0])
         }
         data = {
             "model": model,
             "language_code": language_code,
-            "with_diacritics": "false",
+            "mode": mode,
         }
 
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -65,7 +70,7 @@ class SarvamClient:
     async def text_to_speech(
         self,
         text: str,
-        speaker: str = "meera",
+        speaker: str = "pooja",
         model: str = "bulbul:v3",
         language_code: str = "ml-IN",
     ) -> bytes:
@@ -84,8 +89,8 @@ class SarvamClient:
 
         url = f"{self.base_url}/text-to-speech"
         payload = {
-            "inputs": [text],
-            "target_language_code": language_code,
+            "text": text,
+            "language_code": language_code,
             "speaker": speaker,
             "pitch": 0,
             "pace": 1.0,
@@ -116,11 +121,11 @@ class SarvamClient:
         self,
         messages: List[Dict[str, Any]],
         tools: Optional[List[Dict[str, Any]]] = None,
-        model: str = "sarvam-30b",
+        model: str = "sarvam-105b-conversations",
         temperature: float = 0.2,
     ) -> Dict[str, Any]:
         """
-        Calls Sarvam LLM (sarvam-30b or sarvam-105b) with OpenAI-compatible tool calling.
+        Calls Sarvam-105B Conversations with OpenAI-compatible tool calling.
         """
         if not self.is_configured:
             raise ValueError("SARVAM_API_KEY is not configured")

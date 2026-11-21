@@ -28,7 +28,15 @@ export const PushToTalk: React.FC<PushToTalkProps> = ({
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunksRef.current = [];
-      const mediaRecorder = new MediaRecorder(stream);
+      const supportedMimeType = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4',
+      ].find((mimeType) => MediaRecorder.isTypeSupported(mimeType));
+      const mediaRecorder = new MediaRecorder(
+        stream,
+        supportedMimeType ? { mimeType: supportedMimeType } : undefined,
+      );
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
@@ -38,8 +46,10 @@ export const PushToTalk: React.FC<PushToTalkProps> = ({
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        await sendAudioPayload(audioBlob);
+        const audioType = audioChunksRef.current[0]?.type || mediaRecorder.mimeType || 'audio/webm';
+        const extension = audioType.includes('webm') ? 'webm' : audioType.includes('mp4') ? 'mp4' : 'wav';
+        const audioBlob = new Blob(audioChunksRef.current, { type: audioType });
+        await sendAudioPayload(audioBlob, undefined, `field_recording.${extension}`);
         stream.getTracks().forEach((track) => track.stop());
       };
 
@@ -59,13 +69,13 @@ export const PushToTalk: React.FC<PushToTalkProps> = ({
     }
   };
 
-  const sendAudioPayload = async (audioBlob?: Blob, text?: string) => {
+  const sendAudioPayload = async (audioBlob?: Blob, text?: string, audioFilename = 'field_recording.wav') => {
     setIsProcessing(true);
     const formData = new FormData();
     formData.append('crew_id', selectedCrewId);
 
     if (audioBlob) {
-      formData.append('audio', audioBlob, 'field_recording.wav');
+      formData.append('audio', audioBlob, audioFilename);
     }
     if (text) {
       formData.append('text_fallback', text);
@@ -126,9 +136,6 @@ export const PushToTalk: React.FC<PushToTalkProps> = ({
             <Volume2 className="w-4 h-4 text-emerald-400" />
             Sarvam Malayalam Voice Desk (പായൽ കൺട്രോൾ റൂം)
           </h2>
-          <p className="text-xs text-slate-400">
-            Push-to-Talk Malayalam reporting powered by Saaras STT & Bulbul v3 TTS
-          </p>
         </div>
         <button
           onClick={() => setShowTextInput(!showTextInput)}
@@ -172,20 +179,10 @@ export const PushToTalk: React.FC<PushToTalkProps> = ({
           </span>
         </button>
 
-        <p className="text-xs text-slate-400 mt-3 text-center">
-          {isRecording
-            ? '🔴 Recording Malayalam speech... Release when finished'
-            : isProcessing
-            ? 'Transcribing with Saaras & dispatching with sarvam-30b...'
-            : 'Hold the microphone to report kg collected or request a yard assignment in Malayalam'}
-        </p>
       </div>
 
       {/* Preset Malayalam Quick Commands for Testing / Houseboat Demo */}
       <div className="border-t border-slate-800/80 pt-3 mt-2">
-        <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2">
-          Demo Presets (Malayalam Spoken Prompts):
-        </span>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => sendPreset('ഞങ്ങൾ കൈനകരിയിൽ 350 കിലോ പായൽ ശേഖരിച്ചു, അടുത്തത് എങ്ങോട്ട് പോണം?')}
@@ -218,7 +215,7 @@ export const PushToTalk: React.FC<PushToTalkProps> = ({
             type="text"
             value={textFallback}
             onChange={(e) => setTextFallback(e.target.value)}
-            placeholder="Type Malayalam or English query (e.g. 400 kg hyacinth collected)..."
+            placeholder=""
             className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
           />
           <button

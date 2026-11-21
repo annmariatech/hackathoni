@@ -36,12 +36,18 @@ async def voice_interaction(
     executes tool-calling dispatcher against SQLite state, and generates Bulbul v3 TTS response.
     """
     audio_bytes = None
+    audio_filename = "recording.wav"
+    audio_content_type = "audio/wav"
     if audio:
         audio_bytes = await audio.read()
+        audio_filename = audio.filename or audio_filename
+        audio_content_type = (audio.content_type or audio_content_type).split(";", 1)[0]
 
     interaction_id = str(uuid.uuid4())
     result = await dispatcher.process_interaction(
         audio_bytes=audio_bytes,
+        audio_filename=audio_filename,
+        audio_content_type=audio_content_type,
         text_input=text_fallback,
         crew_id=crew_id,
         state_executor=db_state_executor

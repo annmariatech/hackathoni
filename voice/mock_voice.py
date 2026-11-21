@@ -51,9 +51,11 @@ class MockSarvamClient:
         self,
         audio_bytes: bytes,
         filename: str = "recording.wav",
-        model: str = "saaras:v3",
+        model: str = "saaras:v4",
         language_code: str = "ml-IN",
         approx_duration_sec: float = 2.5,
+        mode: str = "codemix",
+        content_type: str = "audio/wav",
     ) -> str:
         usage_tracker.log_stt(approx_duration_sec)
         # Return standard harvester message in Malayalam
@@ -62,7 +64,7 @@ class MockSarvamClient:
     async def text_to_speech(
         self,
         text: str,
-        speaker: str = "meera",
+        speaker: str = "pooja",
         model: str = "bulbul:v3",
         language_code: str = "ml-IN",
     ) -> bytes:
@@ -80,10 +82,21 @@ class MockSarvamClient:
         self,
         messages: List[Dict[str, Any]],
         tools: Optional[List[Dict[str, Any]]] = None,
-        model: str = "sarvam-30b",
+        model: str = "sarvam-105b-conversations",
         temperature: float = 0.2,
     ) -> Dict[str, Any]:
         usage_tracker.log_llm(110)
+
+        if messages and messages[-1].get("role") == "tool":
+            return {
+                "choices": [{
+                    "message": {
+                        "role": "assistant",
+                        "content": "നന്ദി. നിങ്ങളുടെ റിപ്പോർട്ട് രേഖപ്പെടുത്തി. അടുത്ത നടപടി സ്ക്രീനിൽ കാണാം."
+                    }
+                }],
+                "usage": {"prompt_tokens": 75, "completion_tokens": 20, "total_tokens": 95}
+            }
 
         # Look at the latest user message
         user_msg = messages[-1].get("content", "") if messages else ""

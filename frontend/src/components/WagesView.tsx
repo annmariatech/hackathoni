@@ -32,9 +32,6 @@ export const WagesView: React.FC<WagesViewProps> = ({ transactions }) => {
             <h2 className="font-display font-extrabold text-2xl text-[var(--ink)] mt-0.5">
               വിതരണം ചെയ്ത കൂലി (Wages Disbursed)
             </h2>
-            <p className="font-ui text-xs text-[var(--ink-soft)] mt-0.5">
-              കായൽ പായൽ നീക്കം ചെയ്തതിനും കരയ്ക്കെത്തിച്ചതിനുമുള്ള തത്സമയ കൂലി വിതരണം
-            </p>
           </div>
 
           <div className="text-right sm:border-l sm:border-[var(--ink)]/20 sm:pl-4">
@@ -61,10 +58,6 @@ export const WagesView: React.FC<WagesViewProps> = ({ transactions }) => {
           </div>
           <Stamp type="verified" size="sm" />
         </div>
-
-        <p className="font-ui text-xs text-[var(--ink-soft)]">
-          കയർ പിടി ഇടത്തോട്ടും വലത്തോട്ടും നീക്കി ശേഖരണത്തിന് മുൻപും ശേഷവുമുള്ള മാറ്റം പരിശോധിക്കാം:
-        </p>
 
         <BeforeAfterSlider />
       </PaperCard>

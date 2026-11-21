@@ -10,10 +10,10 @@ The Voice agent owns and edits only files inside `voice/`:
 - `voice/mock_voice.py`: Offline simulation client for testing without internet or API key.
 
 ## 2. Model Specifications (Strict)
-- **STT (Speech-to-Text):** Use Saaras (`saaras:v3` or `saaras:v2`) with language code `ml-IN` and support for Malayalam-English code-mixing.
-- **TTS (Text-to-Speech):** Use Bulbul v3 (`bulbul:v3`) with language code `ml-IN` and speaker `meera` or `pavithra`.
-- **Dispatcher / LLM:** Use `sarvam-30b` or `sarvam-105b` with tool-calling capabilities via OpenAI-compatible `/v1/chat/completions`.
-- **PROHIBITED:** Never use `sarvam-m` (deprecated). Pass all model names explicitly in API payloads.
+- **STT (Speech-to-Text):** Use Saaras v4 (`saaras:v4`) with language code `ml-IN` and `mode="codemix"` for Malayalam-English field reports. Saaras v3 is legacy.
+- **TTS (Text-to-Speech):** Use Bulbul v3 (`bulbul:v3`) with language code `ml-IN` and a supported Malayalam speaker such as `pooja` or `shubh`. Send the current REST fields `text` and `language_code`.
+- **Dispatcher / LLM:** Use `sarvam-105b-conversations` for voice dialogue or `sarvam-105b` for more complex reasoning with tool-calling via `/v1/chat/completions`.
+- **PROHIBITED:** Never use `sarvam-m` or `sarvam-30b`; both are deprecated. Pass all model names explicitly in API payloads.
 
 ## 3. Security & Architecture
 - Sarvam API is called **ONLY** from backend code. Never expose `SARVAM_API_KEY` to the frontend or browser.

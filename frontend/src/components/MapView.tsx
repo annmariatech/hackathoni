@@ -1,38 +1,39 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
-import { PatchCollection } from '../types';
-import { BottomSheet } from './primitives/BottomSheet';
-import { Stamp } from './primitives/Stamp';
-import { InkButton } from './primitives/InkButton';
-import { IconSatellite, IconCamera } from './primitives/HandIcons';
 
-interface MapViewProps {
-  patches: PatchCollection | null;
-  selectedCrewId: string;
-  onVerifyPhoto?: (patchId: string, patchName: string) => void;
-}
-
-interface SelectedPatchProps {
+interface SentinelScene {
   id: string;
-  name: string;
-  choke_score: number;
-  area_sqm: number;
-  biomass_est_kg: number;
-  growth_trend: string;
-  nearest_jetty: string;
+  acquired_at: string;
+  month: string;
+  tilejson_url: string;
+  item_url?: string | null;
+  relative_orbit: string;
+  source: string;
 }
 
-export const MapView: React.FC<MapViewProps> = ({ patches, selectedCrewId, onVerifyPhoto }) => {
-  const mapContainer = useRef<HTMLDivElement | null>(null);
+interface SentinelScenesResponse {
+  scenes: SentinelScene[];
+  source: string;
+}
+
+const STUDY_URL = 'https://www.mdpi.com/2072-4292/14/12/2845';
+const STUDY_HEATMAP_URL = 'https://mdpi-res.com/remotesensing/remotesensing-14-02845/article_deploy/html/images/remotesensing-14-02845-g017-550.jpg';
+
+const dateLabel = (scene: SentinelScene) => new Date(scene.acquired_at).toLocaleDateString('en-IN', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'Asia/Kolkata',
+});
+
+const MapScene: React.FC<{ scene: SentinelScene }> = ({ scene }) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
-  const [selectedPatch, setSelectedPatch] = useState<SelectedPatchProps | null>(null);
 
   useEffect(() => {
-    if (!mapContainer.current || mapRef.current) return;
-
-    // Initialize MapLibre GL with clean OSM raster tiles
+    if (!containerRef.current || mapRef.current) return;
     const map = new maplibregl.Map({
-      container: mapContainer.current,
+      container: containerRef.current,
       style: {
         version: 8,
         sources: {
@@ -43,244 +44,174 @@ export const MapView: React.FC<MapViewProps> = ({ patches, selectedCrewId, onVer
             attribution: '&copy; OpenStreetMap contributors',
           },
         },
-        layers: [
-          {
-            id: 'osm-layer',
-            type: 'raster',
-            source: 'osm-tiles',
-            minzoom: 0,
-            maxzoom: 19,
-          },
-        ],
+        layers: [{ id: 'osm-layer', type: 'raster', source: 'osm-tiles', minzoom: 0, maxzoom: 19 }],
       },
-      center: [76.368, 9.495], // Vembanad / Punnamada center
-      zoom: 12.8,
+      center: [76.365, 9.54],
+      zoom: 11.2,
+      minZoom: 9,
+      maxZoom: 18,
     });
-
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
     mapRef.current = map;
-
     return () => {
       map.remove();
       mapRef.current = null;
     };
   }, []);
 
-  // Update GeoJSON layers when patches change
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !patches) return;
+    if (!map) return;
 
-    const updateLayers = () => {
-      // Split into polygons (patches) and points (boats)
-      const patchFeatures = patches.features.filter((f) => f.geometry.type === 'Polygon');
-      const boatFeatures = patches.features.filter((f) => f.geometry.type === 'Point');
-
-      // 1. Hyacinth Patches Source & Layers
-      if (map.getSource('hyacinth-patches')) {
-        (map.getSource('hyacinth-patches') as maplibregl.GeoJSONSource).setData({
-          type: 'FeatureCollection',
-          features: patchFeatures as any,
-        });
-      } else {
-        map.addSource('hyacinth-patches', {
-          type: 'geojson',
-          data: {
-            type: 'FeatureCollection',
-            features: patchFeatures as any,
-          },
-        });
-
-        // Lavender Hyacinth Fill with opacity
-        map.addLayer({
-          id: 'patch-fills',
-          type: 'fill',
-          source: 'hyacinth-patches',
-          paint: {
-            'fill-color': [
-              'step',
-              ['get', 'choke_score'],
-              '#8A6FD1', // Base Hyacinth purple
-              0.70, '#B4532F', // Choke Warning: Laterite
-              0.85, '#991B1B', // High Choke: Deep Red
-            ],
-            'fill-opacity': 0.72,
-          },
-        });
-
-        // Ink Outline
-        map.addLayer({
-          id: 'patch-borders',
-          type: 'line',
-          source: 'hyacinth-patches',
-          paint: {
-            'line-color': '#1E2B24',
-            'line-width': 2.5,
-          },
-        });
-
-        // Click on patch opens authentic Backwater BottomSheet
-        map.on('click', 'patch-fills', (e) => {
-          if (!e.features || !e.features[0]) return;
-          const p = e.features[0].properties as any;
-          setSelectedPatch({
-            id: p.id || 'patch-1',
-            name: p.name || 'പുന്നമട കനാൽ പായൽ കൂട്ടം',
-            choke_score: Number(p.choke_score) || 0.85,
-            area_sqm: Number(p.area_sqm) || 4200,
-            biomass_est_kg: Number(p.biomass_est_kg) || 10500,
-            growth_trend: p.growth_trend || '+18% per week',
-            nearest_jetty: p.nearest_jetty || 'Punnamada Jetty',
-          });
-        });
-
-        // Cursor pointer
-        map.on('mouseenter', 'patch-fills', () => {
-          map.getCanvas().style.cursor = 'pointer';
-        });
-        map.on('mouseleave', 'patch-fills', () => {
-          map.getCanvas().style.cursor = '';
-        });
-      }
-
-      // 2. Harvester Boat Markers
-      if (map.getSource('boats-source')) {
-        (map.getSource('boats-source') as maplibregl.GeoJSONSource).setData({
-          type: 'FeatureCollection',
-          features: boatFeatures as any,
-        });
-      } else {
-        map.addSource('boats-source', {
-          type: 'geojson',
-          data: {
-            type: 'FeatureCollection',
-            features: boatFeatures as any,
-          },
-        });
-
-        map.addLayer({
-          id: 'boat-markers',
-          type: 'circle',
-          source: 'boats-source',
-          paint: {
-            'circle-radius': 9,
-            'circle-color': '#1F6B57', // Backwater green
-            'circle-stroke-width': 3,
-            'circle-stroke-color': '#F6EEDC', // Kasavu paper
-          },
-        });
-      }
+    const showScene = () => {
+      if (map.getLayer('sentinel-1-layer')) map.removeLayer('sentinel-1-layer');
+      if (map.getSource('sentinel-1-source')) map.removeSource('sentinel-1-source');
+      map.addSource('sentinel-1-source', {
+        type: 'raster',
+        url: scene.tilejson_url,
+        tileSize: 256,
+      });
+      map.addLayer({
+        id: 'sentinel-1-layer',
+        type: 'raster',
+        source: 'sentinel-1-source',
+        paint: { 'raster-opacity': 0.94 },
+      });
     };
 
-    if (map.isStyleLoaded()) {
-      updateLayers();
-    } else {
-      map.once('load', updateLayers);
-    }
-  }, [patches]);
+    if (map.isStyleLoaded()) showScene();
+    else map.once('load', showScene);
+    return () => {
+      map.off('load', showScene);
+    };
+  }, [scene]);
+
+  return <div ref={containerRef} className="h-full w-full" />;
+};
+
+export const MapView: React.FC = () => {
+  const [scenes, setScenes] = useState<SentinelScene[]>([]);
+  const [earlierIndex, setEarlierIndex] = useState(0);
+  const [laterIndex, setLaterIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    fetch('/api/v1/geo/sentinel-1/scenes?months=12')
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Sentinel-1 imagery is unavailable');
+        return (await response.json()) as SentinelScenesResponse;
+      })
+      .then((data) => {
+        if (cancelled) return;
+        const nextScenes = data.scenes ?? [];
+        setScenes(nextScenes);
+        setEarlierIndex(Math.max(0, nextScenes.length - 2));
+        setLaterIndex(Math.max(0, nextScenes.length - 1));
+        if (nextScenes.length === 0) setError('No Sentinel-1 scenes found for this period');
+      })
+      .catch((fetchError: Error) => {
+        if (!cancelled) setError(fetchError.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const earlierScene = scenes[earlierIndex] ?? null;
+  const laterScene = scenes[laterIndex] ?? null;
+  const acquisitionCount = useMemo(() => scenes.length, [scenes]);
+
+  const renderComparison = (label: string, scene: SentinelScene | null, index: number, onChange: (value: number) => void) => (
+    <article className="overflow-hidden rounded-2xl border-2 border-[var(--ink)] bg-[var(--paper)] shadow-[2px_3px_0px_var(--ink)]">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--ink)]/20 px-3 py-2">
+        <span className="font-display text-sm font-extrabold text-[var(--ink)]">{label}</span>
+        <select
+          aria-label={`${label} Sentinel-1 acquisition`}
+          value={index}
+          onChange={(event) => onChange(Number(event.target.value))}
+          className="max-w-[62%] rounded-lg border border-[var(--ink)]/30 bg-[var(--paper-2)] px-2 py-1 font-mono text-[11px] text-[var(--ink)]"
+        >
+          {scenes.map((option, optionIndex) => (
+            <option key={option.id} value={optionIndex}>{dateLabel(option)}</option>
+          ))}
+        </select>
+      </div>
+      <div className="relative h-[360px] bg-[#dce6dc]">
+        {scene && <MapScene scene={scene} />}
+        {scene && (
+          <a
+            href={scene.item_url || STUDY_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="absolute bottom-2 left-2 rounded-lg border border-[var(--ink)]/30 bg-[var(--paper)]/95 px-2 py-1 font-mono text-[10px] font-bold text-[var(--backwater)] underline underline-offset-2"
+          >
+            Sentinel-1 RTC · {scene.relative_orbit}
+          </a>
+        )}
+      </div>
+    </article>
+  );
 
   return (
-    <div className="relative w-full h-[520px] rounded-2xl overflow-hidden border-2 border-[var(--ink)] shadow-2xl bg-[var(--paper-2)]">
-      {/* Map Container */}
-      <div ref={mapContainer} className="w-full h-full" />
-
-      {/* Floating Legend Badge */}
-      <div className="absolute top-3 left-3 z-10 bg-[var(--paper)]/95 backdrop-blur-sm border-2 border-[var(--ink)] rounded-xl p-2.5 shadow-[2px_3px_0px_var(--ink)] text-xs font-display space-y-1.5 max-w-[210px]">
-        <div className="flex items-center justify-between gap-2 border-b border-[var(--ink)]/20 pb-1">
-          <span className="font-bold flex items-center gap-1 text-[var(--ink)]">
-            <IconSatellite size={16} />
-            <span>റഡാർ പായൽ ഭൂപടം</span>
-          </span>
-          <Stamp type="verified" size="sm" />
-        </div>
-        <div className="flex items-center gap-2 text-[11px] font-ui">
-          <span className="w-3.5 h-3.5 rounded bg-[#8A6FD1] border border-[var(--ink)]" />
-          <span>സാധാരണ പായൽ (Patch)</span>
-        </div>
-        <div className="flex items-center gap-2 text-[11px] font-ui">
-          <span className="w-3.5 h-3.5 rounded bg-[#B4532F] border border-[var(--ink)]" />
-          <span>കനാൽ തടസ്സം (Choke Point)</span>
-        </div>
-        <div className="flex items-center gap-2 text-[11px] font-ui">
-          <span className="w-3.5 h-3.5 rounded-full bg-[#1F6B57] border-2 border-white" />
-          <span>ശേഖരണ വള്ളം ({selectedCrewId})</span>
-        </div>
+    <section className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3 px-1">
+        <h1 className="font-display text-2xl font-black text-[var(--ink)] md:text-3xl">
+          വേമ്പനാട് · Sentinel‑1
+        </h1>
+        <span className="font-mono text-[10px] font-bold uppercase tracking-wide text-[var(--ink-soft)]">
+          {acquisitionCount} acquisitions · 12 months
+        </span>
       </div>
 
-      {/* Patch Details BottomSheet */}
-      <BottomSheet
-        isOpen={!!selectedPatch}
-        onClose={() => setSelectedPatch(null)}
-        title={selectedPatch?.name || 'പായൽ വിവരങ്ങൾ'}
-        subtitle={`വേമ്പനാട്ട് കായൽ · സെന്റിനൽ-1 SAR വഴി കണ്ടെത്തിയത്`}
-      >
-        {selectedPatch && (
-          <div className="space-y-4">
-            {/* Stamp Animation */}
-            <div className="flex items-center justify-between bg-[var(--paper-2)] p-3 rounded-xl border border-[var(--ink)]/30">
-              <div>
-                <span className="text-[10px] font-mono text-[var(--ink-soft)] uppercase block">
-                  സാറ്റലൈറ്റ് പരിശോധന നില
-                </span>
-                <span className="font-display font-bold text-sm text-[var(--ink)]">
-                  Sentinel-1 SAR Detection Confirmed
-                </span>
-              </div>
-              <div className="transform -rotate-6 transition-transform">
-                <Stamp type="verified" size="md" />
-              </div>
-            </div>
+      {loading && <p className="px-1 text-sm font-semibold text-[var(--ink-soft)]">Loading imagery…</p>}
+      {!loading && error && (
+        <p role="status" className="rounded-xl border border-[var(--ink)]/30 bg-[var(--paper)] px-4 py-3 font-display text-sm font-bold text-[var(--ink)]">
+          {error}
+        </p>
+      )}
 
-            {/* Metrics Grid */}
-            <div className="grid grid-cols-2 gap-2 text-xs font-ui">
-              <div className="p-3 bg-[var(--paper-2)] rounded-xl border border-[var(--ink)]/20">
-                <span className="text-[10px] text-[var(--ink-soft)] block">തടസ്സ തോത് (Choke Score):</span>
-                <b className="font-display text-lg text-[var(--laterite)]">
-                  {(selectedPatch.choke_score * 100).toFixed(0)}%
-                </b>
-              </div>
-              <div className="p-3 bg-[var(--paper-2)] rounded-xl border border-[var(--ink)]/20">
-                <span className="text-[10px] text-[var(--ink-soft)] block">വിസ്തീർണ്ണം (Area):</span>
-                <b className="font-mono text-lg text-[var(--ink)]">
-                  {selectedPatch.area_sqm.toLocaleString()} m²
-                </b>
-              </div>
-              <div className="p-3 bg-[var(--paper-2)] rounded-xl border border-[var(--ink)]/20">
-                <span className="text-[10px] text-[var(--ink-soft)] block">കണക്കാക്കിയ ഭാരം (Biomass):</span>
-                <b className="font-display text-lg text-[var(--backwater)]">
-                  {(selectedPatch.biomass_est_kg / 1000).toFixed(1)} tons
-                </b>
-              </div>
-              <div className="p-3 bg-[var(--paper-2)] rounded-xl border border-[var(--ink)]/20">
-                <span className="text-[10px] text-[var(--ink-soft)] block">അടുത്തുള്ള ജെട്ടി (Jetty):</span>
-                <b className="font-ui text-xs text-[var(--ink)] block truncate">
-                  {selectedPatch.nearest_jetty}
-                </b>
-              </div>
-            </div>
+      {scenes.length > 0 && (
+        <div className="grid gap-3 lg:grid-cols-2">
+          {renderComparison('Earlier', earlierScene, earlierIndex, setEarlierIndex)}
+          {renderComparison('Later', laterScene, laterIndex, setLaterIndex)}
+        </div>
+      )}
 
-            {/* Action to Verify via Photo */}
-            {onVerifyPhoto && (
-              <div className="pt-2">
-                <InkButton
-                  variant="primary"
-                  fullWidth
-                  onClick={() => {
-                    const p = selectedPatch;
-                    setSelectedPatch(null);
-                    onVerifyPhoto(p.id, p.name);
-                  }}
-                >
-                  <span className="flex items-center justify-center gap-2">
-                    <IconCamera size={18} />
-                    <span>ഫോട്ടോ വഴി ശേഖരണം സ്ഥിരീകരിക്കുക (Verify Photo)</span>
-                  </span>
-                </InkButton>
-              </div>
-            )}
-          </div>
-        )}
-      </BottomSheet>
-    </div>
+      <p className="px-1 text-xs text-[var(--ink-soft)]">
+        Sentinel‑1 RTC scenes · no current hyacinth classification
+      </p>
+
+      <article className="overflow-hidden rounded-2xl border-2 border-[var(--ink)] bg-[var(--paper)] shadow-[2px_3px_0px_var(--ink)]">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--ink)]/20 px-4 py-3">
+          <h2 className="font-display text-sm font-extrabold text-[var(--ink)]">Vembanad · 2019–2021 detections</h2>
+          <a
+            href={STUDY_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono text-[10px] font-bold uppercase tracking-wide text-[var(--backwater)] underline underline-offset-4"
+          >
+            Source study
+          </a>
+        </div>
+        <img
+          src={STUDY_HEATMAP_URL}
+          alt="Published Sentinel-1 heatmap of water hyacinth detections in Vembanad Lake from January 2019 to January 2021"
+          className="block max-h-[480px] w-full object-contain bg-white"
+          loading="lazy"
+        />
+        <p className="px-4 py-2 text-xs text-[var(--ink-soft)]">
+          Heatmap from 46 Sentinel‑1 acquisitions; locations between southern paddies and near the northern barrage.
+        </p>
+      </article>
+    </section>
   );
 };

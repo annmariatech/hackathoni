@@ -39,13 +39,6 @@ export const SpeakView: React.FC<SpeakViewProps> = ({ selectedCrewId, onInteract
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
 
-  // Quick fallback pills
-  const samplePrompts = [
-    'ഞങ്ങൾ ലീലയും സതിയും, വള്ളം 1. പുന്നമടയിൽ നിന്ന് 350 കിലോ പായൽ എടുത്തു. കൈനകരി യാർഡിൽ സ്ലോട്ട് ഉണ്ടോ?',
-    'വള്ളം 2 അനിത. 420 കിലോ പായൽ ശേഖരിച്ചു. മഴ പെയ്യാൻ സാധ്യതയുണ്ടോ?',
-    'ഞങ്ങൾ നെടുമുടി ചാനലിൽ എത്തി. 280 കിലോ കരയ്ക്കുകയറ്റി.',
-  ];
-
   const startVoiceRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -175,15 +168,9 @@ export const SpeakView: React.FC<SpeakViewProps> = ({ selectedCrewId, onInteract
       {/* 1. Nilavilakku Voice Console */}
       <PaperCard hasKasavu className="bg-[var(--paper)] text-center p-6 space-y-4">
         <div>
-          <span className="text-[10px] font-mono text-[var(--laterite)] font-bold uppercase tracking-wider block">
-            സർവ്വം മലയാളം വോയ്സ് ഡെസ്ക് · Sarvam Voice Desk
-          </span>
           <h2 className="font-display font-extrabold text-2xl text-[var(--ink)] mt-0.5">
-            പറയൂ (Speak to Report)
+            പറയൂ
           </h2>
-          <p className="font-ui text-xs text-[var(--ink-soft)] max-w-md mx-auto mt-1">
-            മൈക്ക് അമർത്തിപ്പിടിച്ച് മലയാളത്തിൽ സംസാരിക്കൂ — പായലിന്റെ അളവും സ്ഥാനവും നേരിട്ട് ലെഡ്ജറിലേക്ക് എത്തും.
-          </p>
         </div>
 
         {/* Central Nilavilakku Lamp Flame Mic */}
@@ -202,10 +189,10 @@ export const SpeakView: React.FC<SpeakViewProps> = ({ selectedCrewId, onInteract
 
           <span className="mt-4 font-display font-bold text-sm text-[var(--ink)]">
             {isRecording
-              ? 'കേൾക്കുന്നു... (Listening in Malayalam)'
+              ? 'കേൾക്കുന്നു'
               : isProcessing
-              ? 'സർവ്വം അപഗ്രഥിക്കുന്നു... (Processing via Sarvam...)'
-              : 'വിളക്കിൽ തൊടൂ (Tap to Speak)'}
+              ? 'പ്രവർത്തിക്കുന്നു'
+              : 'പറയൂ'}
           </span>
         </div>
 
@@ -215,7 +202,7 @@ export const SpeakView: React.FC<SpeakViewProps> = ({ selectedCrewId, onInteract
         {transcript && (
           <div className="p-4 bg-[var(--paper-2)] border-2 border-[var(--ink)] rounded-xl text-left space-y-2 shadow-[2px_3px_0px_var(--ink)]">
             <span className="text-[10px] font-mono uppercase text-[var(--ink-soft)] block font-bold">
-              തത്സമയ മലയാളം ട്രാൻസ്ക്രിപ്റ്റ് (Saaras v3 STT):
+              ട്രാൻസ്ക്രിപ്റ്റ്
             </span>
             <p className="font-display text-lg font-bold text-[var(--ink)] leading-relaxed">
               "{transcript}"
@@ -227,7 +214,7 @@ export const SpeakView: React.FC<SpeakViewProps> = ({ selectedCrewId, onInteract
         {transcript && (
           <div className="space-y-2 text-left pt-2">
             <span className="text-xs font-display font-bold text-[var(--ink)] block">
-              കണ്ടെത്തിയ വിവരങ്ങൾ (Extracted Fields):
+              വിവരങ്ങൾ
             </span>
             <div className="flex flex-wrap gap-2">
               <Chip label={extractedCrew} variant="leaf" />
@@ -244,7 +231,7 @@ export const SpeakView: React.FC<SpeakViewProps> = ({ selectedCrewId, onInteract
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-mono uppercase text-[var(--backwater)] font-bold flex items-center gap-1.5">
                 <Volume2 className="w-4 h-4 text-[var(--backwater)]" />
-                ഡിസ്പാച്ചറുടെ മറുപടി (Bulbul v3 TTS):
+                മറുപടി
               </span>
               <Stamp type="verified" size="sm" />
             </div>
@@ -258,35 +245,8 @@ export const SpeakView: React.FC<SpeakViewProps> = ({ selectedCrewId, onInteract
         )}
       </PaperCard>
 
-      {/* 2. Quick Demo Prompt Pills */}
-      <PaperCard className="bg-[var(--paper)] space-y-3">
-        <span className="text-xs font-display font-bold text-[var(--ink)] block">
-          പരീക്ഷിക്കാൻ മാതൃകാ വാക്യങ്ങൾ (Sample Prompts):
-        </span>
-        <div className="space-y-2">
-          {samplePrompts.map((p, idx) => (
-            <button
-              key={idx}
-              onClick={() => {
-                setTextInput(p);
-                submitVoicePayload(undefined, p);
-              }}
-              className="w-full text-left p-2.5 rounded-xl border border-[var(--ink)]/30 bg-[var(--paper-2)] hover:border-[var(--ink)] text-xs font-ui text-[var(--ink)] transition flex items-center justify-between group"
-            >
-              <span className="truncate pr-2">"{p}"</span>
-              <span className="text-[10px] font-display font-bold text-[var(--laterite)] group-hover:underline shrink-0">
-                ശ്രമിക്കൂ →
-              </span>
-            </button>
-          ))}
-        </div>
-      </PaperCard>
-
-      {/* 3. Text Fallback Input */}
+      {/* Text input */}
       <PaperCard className="bg-[var(--paper)] space-y-2">
-        <span className="text-xs font-display font-bold text-[var(--ink)] block">
-          എഴുതി അയക്കുക (Text Fallback Input):
-        </span>
         <div className="flex gap-2">
           <input
             type="text"
@@ -298,7 +258,7 @@ export const SpeakView: React.FC<SpeakViewProps> = ({ selectedCrewId, onInteract
                 setTextInput('');
               }
             }}
-            placeholder="ഉദാ: വള്ളം 1, 350 കിലോ പായൽ ശേഖരിച്ചു..."
+            placeholder=""
             className="flex-1 bg-[var(--paper-2)] border-2 border-[var(--ink)] rounded-xl px-3 py-2 text-xs font-ui text-[var(--ink)] focus:outline-none"
           />
           <InkButton

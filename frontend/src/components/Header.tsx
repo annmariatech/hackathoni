@@ -1,7 +1,6 @@
 import React from 'react';
 import { KasavuBorder } from './primitives/KasavuBorder';
-import { Stamp } from './primitives/Stamp';
-import { Sun, Moon, BookOpen, Palette } from 'lucide-react';
+import { Sun, Moon, BookOpen } from 'lucide-react';
 
 export type MainTab = 'today' | 'map' | 'speak' | 'wages' | 'dashboard';
 
@@ -9,7 +8,6 @@ interface HeaderProps {
   activeTab: MainTab;
   onSelectTab: (tab: MainTab) => void;
   onOpenStory: () => void;
-  onOpenKit: () => void;
   isDark: boolean;
   onToggleTheme: () => void;
 }
@@ -18,7 +16,6 @@ export const Header: React.FC<HeaderProps> = ({
   activeTab,
   onSelectTab,
   onOpenStory,
-  onOpenKit,
   isDark,
   onToggleTheme,
 }) => {
@@ -42,25 +39,8 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="font-display text-xs text-[var(--laterite)] font-bold hidden sm:inline">
                 Payal-to-Pay
               </span>
-              <Stamp type="simulated" size="sm" />
             </div>
-            <span className="text-[10px] text-[var(--ink-soft)] font-ui block">
-              വേമ്പനാട്ട് കായൽ ഉപഗ്രഹ-കൂലി വിതരണ ശൃംഖല · Alappuzha
-            </span>
           </button>
-        </div>
-
-        {/* Data Honesty Badges */}
-        <div className="hidden lg:flex items-center gap-2 text-[10px] font-mono">
-          <span className="px-2 py-0.5 rounded bg-[var(--backwater)]/10 text-[var(--backwater)] border border-[var(--backwater)]/30 font-bold">
-            [REAL] Sentinel-1 SAR
-          </span>
-          <span className="px-2 py-0.5 rounded bg-[var(--laterite)]/10 text-[var(--laterite)] border border-[var(--laterite)]/30 font-bold">
-            [REAL] Sarvam Saaras & Bulbul
-          </span>
-          <span className="px-2 py-0.5 rounded bg-[var(--sun)]/20 text-black border border-[var(--sun)] font-bold">
-            [SIMULATED] Wages & Ledger
-          </span>
         </div>
 
         {/* Action Controls & Navigation */}
@@ -74,16 +54,6 @@ export const Header: React.FC<HeaderProps> = ({
             <BookOpen className="w-3.5 h-3.5 text-[var(--laterite)]" />
             <span className="hidden sm:inline">കഥ ·</span>
             <span>Story</span>
-          </button>
-
-          {/* Component Kit Link */}
-          <button
-            onClick={onOpenKit}
-            className="px-2.5 py-1.5 rounded-lg border border-[var(--ink)]/40 bg-[var(--paper-2)] hover:bg-[var(--paper)] text-xs font-display text-[var(--ink)] flex items-center gap-1 transition tap-target-48"
-            title="View Component Kit"
-          >
-            <Palette className="w-3.5 h-3.5 text-[var(--backwater)]" />
-            <span>/kit</span>
           </button>
 
           {/* Day / Night Lamp Toggle */}
@@ -104,7 +74,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Desktop Navigation Tabs (Hidden on mobile where bottom TabBar takes over) */}
       <div className="hidden md:block border-t border-[var(--ink)]/20 bg-[var(--paper-2)]/50">
-        <div className="max-w-7xl mx-auto px-4 flex items-center gap-1 text-xs font-display font-bold">
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-center gap-1 text-xs font-display font-bold">
           <button
             onClick={() => onSelectTab('today')}
             className={`py-2 px-3 border-b-2 transition ${
