@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VoiceInteraction",
+  "type": "object",
+  "required": [
+    "interaction_id",
+    "timestamp",
+    "transcript_malayalam",
+    "intent",
+    "dispatcher_response_malayalam",
+    "audio_response_url",
+    "credit_usage"
+  ],
+  "properties": {
+    "interaction_id": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "transcript_malayalam": { "type": "string" },
+    "intent": {
+      "type": "string",
+      "enum": ["REPORT_HARVEST", "GET_ASSIGNMENT", "CHECK_WEATHER", "CHECK_YARD_SLOT", "GENERAL_QUERY"]
+    },
+    "tool_calls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tool_name": { "type": "string" },
+          "arguments": { "type": "object" },
+          "result": { "type": "object" }
+        }
+      }
+    },
+    "dispatcher_response_malayalam": { "type": "string" },
+    "audio_response_url": { "type": "string" },
+    "audio_response_base64": { "type": "string" },
+    "credit_usage": {
+      "type": "object",
+      "required": ["stt_audio_seconds", "tts_characters", "llm_tokens"],
+      "properties": {
+        "stt_audio_seconds": { "type": "number" },
+        "tts_characters": { "type": "integer" },
+        "llm_tokens": { "type": "integer" },
+        "is_cached_audio": { "type": "boolean" }
+      }
+    }
+  }
+}

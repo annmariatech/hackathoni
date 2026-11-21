@@ -1,0 +1,241 @@
+openapi: 3.0.3
+info:
+  title: Payal-to-Pay (പായൽ) API
+  description: Satellite-to-wages water hyacinth supply chain with Malayalam voice interface for Vembanad Lake, Alappuzha.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+    description: Local development backend
+
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      description: Returns backend service status and upstream readiness.
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: "ok" }
+                  timestamp: { type: string, format: date-time }
+                  sarvam_connected: { type: boolean }
+                  version: { type: string, example: "1.0.0" }
+
+  /api/v1/geo/patches:
+    get:
+      summary: Get detected hyacinth patches
+      description: Returns GeoJSON FeatureCollection of hyacinth patches with choke scores and biomass estimates.
+      responses:
+        '200':
+          description: GeoJSON patch collection
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type: { type: string, example: "FeatureCollection" }
+                  features:
+                    type: array
+                    items:
+                      type: object
+                  metadata:
+                    type: object
+                    properties:
+                      total_patches: { type: integer }
+                      total_biomass_kg: { type: number }
+                      source: { type: string, example: "Sentinel-1 SAR" }
+                      is_simulated: { type: boolean }
+
+  /api/v1/forecast/drying-windows:
+    get:
+      summary: Get weather and drying yard forecast
+      description: Returns 7-day hourly rain forecast, harvest safety classification, and drying yard capacity.
+      responses:
+        '200':
+          description: Weather and yard availability
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeatherDryingForecast'
+
+  /api/v1/routes/optimize:
+    post:
+      summary: Optimize harvester boat routes
+      description: Solves CVRPTW using OR-Tools and returns route plans with baseline heuristic delta comparisons.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                max_boats: { type: integer, default: 3 }
+                cutoff_hour: { type: integer, default: 17 }
+      responses:
+        '200':
+          description: Optimized routes with baseline delta metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RouteOptimizationPlan'
+
+  /api/v1/voice/interact:
+    post:
+      summary: Push-to-Talk voice interaction
+      description: Accepts audio file (WAV/WebM) or text input, performs Saaras STT, Sarvam tool dispatch, and Bulbul TTS.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                audio: { type: string, format: binary }
+                crew_id: { type: string, default: "crew-1" }
+                text_fallback: { type: string }
+      responses:
+        '200':
+          description: Voice response, transcript, executed tool actions, and TTS audio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceInteraction'
+
+  /api/v1/voice/speak:
+    post:
+      summary: Text-to-Speech synthesis
+      description: Generates Malayalam speech audio for arbitrary text using Bulbul v3.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string }
+                speaker: { type: string, default: "meera" }
+      responses:
+        '200':
+          description: Audio bytes or URL
+          content:
+            audio/wav:
+              schema:
+                type: string
+                format: binary
+
+  /api/v1/voice/credits:
+    get:
+      summary: Sarvam credit usage tracking
+      description: Returns cumulative characters and audio seconds used, plus cache hit ratio.
+      responses:
+        '200':
+          description: Credit statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_stt_seconds: { type: number }
+                  total_tts_chars: { type: integer }
+                  total_llm_tokens: { type: integer }
+                  cached_audio_hits: { type: integer }
+
+  /api/v1/verify/photo:
+    post:
+      summary: Verify harvest with geotagged photo
+      description: Validates EXIF GPS location against target patch coordinates.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [photo, patch_id, crew_id]
+              properties:
+                photo: { type: string, format: binary }
+                patch_id: { type: string }
+                crew_id: { type: string }
+      responses:
+        '200':
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verified: { type: boolean }
+                  distance_meters: { type: number }
+                  message: { type: string }
+                  staged_payout_inr: { type: number }
+
+  /api/v1/ledger/transactions:
+    get:
+      summary: List simulated ledger transactions
+      description: Returns list of simulated wage payments.
+      responses:
+        '200':
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LedgerTransaction'
+    post:
+      summary: Disburse simulated wage payment
+      description: Records a new simulated wage payout.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [crew_id, patch_id, weight_kg]
+              properties:
+                crew_id: { type: string }
+                patch_id: { type: string }
+                yard_id: { type: string }
+                weight_kg: { type: number }
+      responses:
+        '201':
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerTransaction'
+
+  /api/v1/credibility/benchmarks:
+    get:
+      summary: Credibility and accuracy benchmarks
+      description: Returns IoU vs hand-labelled patches, speech WER on 20 clips, and optimizer baselines.
+      responses:
+        '200':
+          description: Comprehensive credibility metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  radar_iou: { type: number }
+                  radar_precision: { type: number }
+                  radar_recall: { type: number }
+                  speech_wer: { type: number }
+                  speech_keyword_accuracy: { type: number }
+                  optimizer_fuel_saved_pct: { type: number }
+                  assumptions: { type: array, items: { type: object } }
+
+components:
+  schemas:
+    WeatherDryingForecast:
+      $ref: './schemas/weather.json'
+    RouteOptimizationPlan:
+      $ref: './schemas/route.json'
+    VoiceInteraction:
+      $ref: './schemas/voice_interaction.json'
+    LedgerTransaction:
+      $ref: './schemas/ledger_transaction.json'

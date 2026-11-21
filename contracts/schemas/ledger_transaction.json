@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LedgerTransaction",
+  "type": "object",
+  "required": [
+    "tx_hash",
+    "timestamp",
+    "crew_id",
+    "crew_name",
+    "patch_id",
+    "weight_kg",
+    "rate_inr_per_kg",
+    "base_payout_inr",
+    "bonus_inr",
+    "total_payout_inr",
+    "status",
+    "is_simulated"
+  ],
+  "properties": {
+    "tx_hash": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "crew_id": { "type": "string" },
+    "crew_name": { "type": "string" },
+    "patch_id": { "type": "string" },
+    "yard_id": { "type": "string" },
+    "weight_kg": { "type": "number", "minimum": 0 },
+    "rate_inr_per_kg": { "type": "number", "minimum": 0 },
+    "base_payout_inr": { "type": "number", "minimum": 0 },
+    "bonus_inr": { "type": "number", "minimum": 0 },
+    "total_payout_inr": { "type": "number", "minimum": 0 },
+    "status": { "type": "string", "enum": ["PENDING", "VERIFIED", "DISBURSED"] },
+    "bank_reference": { "type": "string" },
+    "is_simulated": { "type": "boolean", "const": true }
+  }
+}

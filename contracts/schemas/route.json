@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RouteOptimizationPlan",
+  "type": "object",
+  "required": [
+    "plan_id",
+    "created_at",
+    "routes",
+    "baseline_comparison",
+    "is_simulated"
+  ],
+  "properties": {
+    "plan_id": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "routes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["boat_id", "crew_name", "stops", "total_distance_km", "total_biomass_kg", "choke_score_cleared"],
+        "properties": {
+          "boat_id": { "type": "string" },
+          "crew_name": { "type": "string" },
+          "capacity_kg": { "type": "number" },
+          "total_distance_km": { "type": "number" },
+          "total_biomass_kg": { "type": "number" },
+          "choke_score_cleared": { "type": "number" },
+          "stops": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["stop_sequence", "node_id", "node_type", "eta", "action"],
+              "properties": {
+                "stop_sequence": { "type": "integer" },
+                "node_id": { "type": "string" },
+                "node_type": { "type": "string", "enum": ["DEPOT", "PATCH", "DRYING_YARD"] },
+                "name": { "type": "string" },
+                "latitude": { "type": "number" },
+                "longitude": { "type": "number" },
+                "eta": { "type": "string" },
+                "action": { "type": "string", "enum": ["START", "HARVEST", "DROP_OFF", "END"] },
+                "kg_transferred": { "type": "number" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "baseline_comparison": {
+      "type": "object",
+      "required": [
+        "optimizer_distance_km",
+        "baseline_distance_km",
+        "distance_saved_km",
+        "distance_saved_pct",
+        "optimizer_choke_cleared",
+        "baseline_choke_cleared",
+        "choke_improvement_pct"
+      ],
+      "properties": {
+        "optimizer_distance_km": { "type": "number" },
+        "baseline_distance_km": { "type": "number" },
+        "distance_saved_km": { "type": "number" },
+        "distance_saved_pct": { "type": "number" },
+        "optimizer_choke_cleared": { "type": "number" },
+        "baseline_choke_cleared": { "type": "number" },
+        "choke_improvement_pct": { "type": "number" }
+      }
+    },
+    "is_simulated": { "type": "boolean" }
+  }
+}

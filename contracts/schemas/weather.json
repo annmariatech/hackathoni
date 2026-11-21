@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WeatherDryingForecast",
+  "type": "object",
+  "required": [
+    "location",
+    "generated_at",
+    "drying_windows",
+    "drying_yards",
+    "is_simulated"
+  ],
+  "properties": {
+    "location": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" }
+      }
+    },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "drying_windows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["date", "condition", "precipitation_mm", "sunshine_hours", "is_harvest_safe"],
+        "properties": {
+          "date": { "type": "string", "format": "date" },
+          "condition": { "type": "string", "enum": ["OPTIMAL_DRY", "MARGINAL", "WET_NO_HARVEST"] },
+          "precipitation_mm": { "type": "number" },
+          "sunshine_hours": { "type": "number" },
+          "relative_humidity_pct": { "type": "number" },
+          "is_harvest_safe": { "type": "boolean" }
+        }
+      }
+    },
+    "drying_yards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["yard_id", "name", "total_capacity_sqm", "occupied_sqm", "available_sqm"],
+        "properties": {
+          "yard_id": { "type": "string" },
+          "name": { "type": "string" },
+          "location": {
+            "type": "object",
+            "properties": {
+              "latitude": { "type": "number" },
+              "longitude": { "type": "number" }
+            }
+          },
+          "total_capacity_sqm": { "type": "number" },
+          "occupied_sqm": { "type": "number" },
+          "available_sqm": { "type": "number" }
+        }
+      }
+    },
+    "is_simulated": { "type": "boolean" }
+  }
+}
