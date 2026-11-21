@@ -125,6 +125,16 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
           >
             Ledger
           </button>
+          <button
+            onClick={() => setActiveTab('credibility')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+              activeTab === 'credibility'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+            }`}
+          >
+            Credibility Panel
+          </button>
         </div>
       </div>
     </header>

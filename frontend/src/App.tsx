@@ -7,6 +7,9 @@ import { PatchCollection, LedgerTransaction, VoiceInteractionResponse } from './
 import { Ship } from 'lucide-react';
 import { RouteComparison } from './components/RouteComparison';
 import { DryingYardSlots } from './components/DryingYardSlots';
+import { CredibilityPanel } from './components/CredibilityPanel';
+import { PhotoVerificationModal } from './components/PhotoVerificationModal';
+import { Camera } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'map' | 'routes' | 'forecast' | 'ledger' | 'credibility'>('map');
@@ -14,6 +17,7 @@ export const App: React.FC = () => {
   const [transactions, setTransactions] = useState<LedgerTransaction[]>([]);
   const [selectedCrewId, setSelectedCrewId] = useState<string>('crew-1');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [verifyingPatch, setVerifyingPatch] = useState<{ id: string; name: string } | null>(null);
 
   const fetchPatches = async () => {
     try {
@@ -86,6 +90,13 @@ export const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4 text-slate-400">
+            <button
+              onClick={() => setVerifyingPatch({ id: 'patch-1', name: 'Punnamada Jetties Choke' })}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-semibold transition"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              Verify Harvest via Photo
+            </button>
             <span>AOI: <b>Punnamada–Kainakary Corridor</b> (Vembanad Lake)</span>
             <span>·</span>
             <span>Target: <b>Choke Point Clearance & Women's Craft Fibre Supply</b></span>
@@ -150,7 +161,30 @@ export const App: React.FC = () => {
             <SimulatedLedger transactions={transactions} />
           </div>
         )}
+
+        {/* Credibility & Audit Tab View */}
+        {activeTab === 'credibility' && (
+          <div className="space-y-6">
+            <CredibilityPanel />
+          </div>
+        )}
       </main>
+
+      {/* Field Photo Verification Modal */}
+      {verifyingPatch && (
+        <PhotoVerificationModal
+          patchId={verifyingPatch.id}
+          patchName={verifyingPatch.name}
+          crewId={selectedCrewId}
+          onVerified={() => {
+            fetchPatches();
+            fetchTransactions();
+            setToastMessage("Field Photo Geotag Verified! Simulated wage disbursed to ledger.");
+            setTimeout(() => setToastMessage(null), 5000);
+          }}
+          onClose={() => setVerifyingPatch(null)}
+        />
+      )}
 
       {/* Footer */}
       <footer className="border-t border-slate-800/80 py-4 px-6 text-center text-xs text-slate-500">
