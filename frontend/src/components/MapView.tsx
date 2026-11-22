@@ -15,6 +15,8 @@ interface SentinelScene {
 interface SentinelScenesResponse {
   scenes: SentinelScene[];
   source: string;
+  retrieved_at?: string;
+  catalog_mode?: 'live' | 'cached';
 }
 
 const STUDY_URL = 'https://www.mdpi.com/2072-4292/14/12/2845';
@@ -52,7 +54,6 @@ const MapScene: React.FC<{ scene: SentinelScene | null }> = ({ scene }) => {
       zoom: 11.2,
       minZoom: 9,
       maxZoom: 18,
-      attributionControl: true,
     });
     const onBaseError = () => {
       setLayerStatus((status) => (status === 'base' ? 'error' : status));
@@ -151,6 +152,8 @@ export const MapView: React.FC = () => {
   const [laterIndex, setLaterIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [catalogMode, setCatalogMode] = useState<'live' | 'cached'>('live');
+  const [catalogRetrievedAt, setCatalogRetrievedAt] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -159,13 +162,21 @@ export const MapView: React.FC = () => {
 
     fetch('/api/v1/geo/sentinel-1/scenes?months=12')
       .then(async (response) => {
-        if (!response.ok) throw new Error('Sentinel-1 imagery is unavailable');
-        return (await response.json()) as SentinelScenesResponse;
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          if (response.status === 404) {
+            throw new Error('Geo API route not found. Restart the backend to load the Sentinel endpoint.');
+          }
+          throw new Error(payload.detail || 'Live catalog and saved Sentinel scenes are unavailable.');
+        }
+        return payload as SentinelScenesResponse;
       })
       .then((data) => {
         if (cancelled) return;
         const nextScenes = data.scenes ?? [];
         setScenes(nextScenes);
+        setCatalogMode(data.catalog_mode === 'cached' ? 'cached' : 'live');
+        setCatalogRetrievedAt(data.retrieved_at ?? null);
         setEarlierIndex(Math.max(0, nextScenes.length - 2));
         setLaterIndex(Math.max(0, nextScenes.length - 1));
         if (nextScenes.length === 0) setError('No Sentinel-1 scenes found for this period');
@@ -232,6 +243,12 @@ export const MapView: React.FC = () => {
           {acquisitionCount} scenes · past year
         </span>
       </div>
+
+      {catalogMode === 'cached' && (
+        <p role="status" className="rounded-xl border border-[#d3a958]/50 bg-[#fbf1d9] px-4 py-2.5 font-mono text-[10px] font-bold text-[#604a20]">
+          Catalog offline · showing real scenes saved {catalogRetrievedAt ? new Date(catalogRetrievedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'earlier'}
+        </p>
+      )}
 
       {loading && <p className="px-1 text-sm font-semibold text-[var(--ink-soft)]">Loading imagery…</p>}
       {!loading && error && (

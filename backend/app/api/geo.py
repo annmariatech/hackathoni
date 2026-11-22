@@ -3,6 +3,8 @@ Payal-to-Pay — Geo API Router
 Provides recent Sentinel-1 RTC scenes and only validated water-hyacinth detections.
 """
 from datetime import date, datetime, timezone
+import json
+from pathlib import Path
 from typing import Any, Dict
 
 import httpx
@@ -12,6 +14,24 @@ from geo.water_mask import AOI_BBOX
 
 router = APIRouter(prefix="/api/v1/geo", tags=["Geo Engine"])
 PLANETARY_COMPUTER_STAC = "https://planetarycomputer.microsoft.com/api/stac/v1/search"
+SCENE_FALLBACK_FILE = Path(__file__).resolve().parents[2] / "data" / "sentinel-1-scenes.json"
+
+
+def _cached_scene_response():
+    try:
+        snapshot = json.loads(SCENE_FALLBACK_FILE.read_text())
+        scenes = snapshot.get("scenes", [])
+        if not scenes:
+            return None
+        return {
+            "scenes": scenes,
+            "aoi": "Vembanad Lake · Punnamada–Kainakary",
+            "source": "Copernicus Sentinel-1 RTC · Microsoft Planetary Computer",
+            "retrieved_at": snapshot.get("retrieved_at"),
+            "catalog_mode": "cached",
+        }
+    except (OSError, ValueError):
+        return None
 
 
 def _month_start(month_offset: int, current: date) -> date:
@@ -40,6 +60,9 @@ async def get_sentinel_1_scenes(months: int = Query(default=6, ge=3, le=12)):
             response.raise_for_status()
             items = response.json().get("features", [])
     except (httpx.HTTPError, ValueError) as exc:
+        cached = _cached_scene_response()
+        if cached:
+            return cached
         raise HTTPException(status_code=502, detail="Sentinel-1 scene catalog is unavailable.") from exc
 
     by_orbit: Dict[str, Dict[str, Dict[str, Any]]] = {}
@@ -85,11 +108,17 @@ async def get_sentinel_1_scenes(months: int = Query(default=6, ge=3, le=12)):
         }
         for month, scene in sorted(selected_scenes.items())
     ]
+    if not scenes:
+        cached = _cached_scene_response()
+        if cached:
+            return cached
+
     return {
         "scenes": scenes,
         "aoi": "Vembanad Lake · Punnamada–Kainakary",
         "source": "Copernicus Sentinel-1 RTC · Microsoft Planetary Computer",
         "retrieved_at": now.isoformat(),
+        "catalog_mode": "live",
     }
 
 
