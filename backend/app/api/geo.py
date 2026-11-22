@@ -46,7 +46,8 @@ async def get_sentinel_1_scenes(months: int = Query(default=6, ge=3, le=12)):
     for item in items:
         properties = item.get("properties", {})
         acquired = properties.get("datetime")
-        tilejson = item.get("assets", {}).get("tilejson", {}).get("href")
+        assets = item.get("assets", {})
+        tilejson = assets.get("tilejson", {}).get("href")
         if not acquired or not tilejson:
             continue
         orbit = str(properties.get("sat:relative_orbit", "unknown"))
@@ -57,6 +58,7 @@ async def get_sentinel_1_scenes(months: int = Query(default=6, ge=3, le=12)):
                 "id": item.get("id"),
                 "acquired_at": acquired,
                 "tilejson_url": tilejson,
+                "preview_url": assets.get("rendered_preview", {}).get("href"),
                 "item_url": next(
                     (link.get("href") for link in item.get("links", []) if link.get("rel") == "self"),
                     None,

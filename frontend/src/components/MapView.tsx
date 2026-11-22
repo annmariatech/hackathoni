@@ -6,6 +6,7 @@ interface SentinelScene {
   acquired_at: string;
   month: string;
   tilejson_url: string;
+  preview_url?: string | null;
   item_url?: string | null;
   relative_orbit: string;
   source: string;
@@ -26,9 +27,10 @@ const dateLabel = (scene: SentinelScene) => new Date(scene.acquired_at).toLocale
   timeZone: 'Asia/Kolkata',
 });
 
-const MapScene: React.FC<{ scene: SentinelScene }> = ({ scene }) => {
+const MapScene: React.FC<{ scene: SentinelScene | null }> = ({ scene }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const [layerStatus, setLayerStatus] = useState<'base' | 'loading' | 'ready' | 'error'>('base');
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -37,23 +39,29 @@ const MapScene: React.FC<{ scene: SentinelScene }> = ({ scene }) => {
       style: {
         version: 8,
         sources: {
-          'osm-tiles': {
+          'satellite-imagery': {
             type: 'raster',
-            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+            tiles: ['https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
             tileSize: 256,
-            attribution: '&copy; OpenStreetMap contributors',
+            attribution: 'Esri, Maxar, Earthstar Geographics, and the GIS User Community',
           },
         },
-        layers: [{ id: 'osm-layer', type: 'raster', source: 'osm-tiles', minzoom: 0, maxzoom: 19 }],
+        layers: [{ id: 'satellite-layer', type: 'raster', source: 'satellite-imagery', minzoom: 0, maxzoom: 19 }],
       },
       center: [76.365, 9.54],
       zoom: 11.2,
       minZoom: 9,
       maxZoom: 18,
+      attributionControl: true,
     });
+    const onBaseError = () => {
+      setLayerStatus((status) => (status === 'base' ? 'error' : status));
+    };
+    map.on('error', onBaseError);
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
     mapRef.current = map;
     return () => {
+      map.off('error', onBaseError);
       map.remove();
       mapRef.current = null;
     };
@@ -62,6 +70,12 @@ const MapScene: React.FC<{ scene: SentinelScene }> = ({ scene }) => {
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+    if (!scene) {
+      setLayerStatus('base');
+      return;
+    }
+    let sourceReady = false;
+    setLayerStatus('loading');
 
     const showScene = () => {
       if (map.getLayer('sentinel-1-layer')) map.removeLayer('sentinel-1-layer');
@@ -69,24 +83,66 @@ const MapScene: React.FC<{ scene: SentinelScene }> = ({ scene }) => {
       map.addSource('sentinel-1-source', {
         type: 'raster',
         url: scene.tilejson_url,
-        tileSize: 256,
       });
       map.addLayer({
         id: 'sentinel-1-layer',
         type: 'raster',
         source: 'sentinel-1-source',
-        paint: { 'raster-opacity': 0.94 },
+        paint: {
+          'raster-opacity': 0.9,
+          'raster-contrast': 0.12,
+          'raster-saturation': -0.18,
+          'raster-fade-duration': 180,
+        },
       });
     };
 
+    const onSourceData = (event: maplibregl.MapSourceDataEvent) => {
+      if (event.sourceId === 'sentinel-1-source' && event.isSourceLoaded) {
+        sourceReady = true;
+        setLayerStatus('ready');
+      }
+    };
+    const onMapError = () => {
+      if (!sourceReady) setLayerStatus('error');
+    };
+
+    map.on('sourcedata', onSourceData);
+    map.on('error', onMapError);
     if (map.isStyleLoaded()) showScene();
-    else map.once('load', showScene);
+    else map.once('style.load', showScene);
+    const fallbackTimer = window.setTimeout(() => {
+      if (!sourceReady) setLayerStatus('error');
+    }, 10000);
+
     return () => {
-      map.off('load', showScene);
+      map.off('style.load', showScene);
+      map.off('sourcedata', onSourceData);
+      map.off('error', onMapError);
+      window.clearTimeout(fallbackTimer);
     };
   }, [scene]);
 
-  return <div ref={containerRef} className="h-full w-full" />;
+  return (
+    <div className="relative h-full w-full">
+      <div ref={containerRef} className="absolute inset-0" />
+      {layerStatus === 'error' && scene?.preview_url && (
+        <img
+          src={scene.preview_url}
+          alt={`Sentinel-1 RTC preview acquired ${dateLabel(scene)}`}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      )}
+      <div className="pointer-events-none absolute left-3 top-3 rounded-lg border border-white/20 bg-[#092a30]/85 px-2.5 py-1.5 font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-white shadow-lg backdrop-blur-sm">
+        {layerStatus === 'ready' ? 'Sentinel‑1 radar' : layerStatus === 'error' ? (scene?.preview_url ? 'Scene preview' : 'Tiles unavailable') : layerStatus === 'base' ? 'Satellite basemap' : 'Loading radar'}
+      </div>
+      {layerStatus === 'error' && !scene?.preview_url && (
+        <div className="absolute inset-0 grid place-items-center bg-[#092a30] px-8 text-center font-display text-sm font-bold text-white">
+          {scene ? 'Sentinel‑1 tiles could not load for this acquisition.' : 'Satellite tiles are unavailable.'}
+        </div>
+      )}
+    </div>
+  );
 };
 
 export const MapView: React.FC = () => {
@@ -131,28 +187,32 @@ export const MapView: React.FC = () => {
   const acquisitionCount = useMemo(() => scenes.length, [scenes]);
 
   const renderComparison = (label: string, scene: SentinelScene | null, index: number, onChange: (value: number) => void) => (
-    <article className="overflow-hidden rounded-2xl border-2 border-[var(--ink)] bg-[var(--paper)] shadow-[2px_3px_0px_var(--ink)]">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--ink)]/20 px-3 py-2">
-        <span className="font-display text-sm font-extrabold text-[var(--ink)]">{label}</span>
-        <select
-          aria-label={`${label} Sentinel-1 acquisition`}
-          value={index}
-          onChange={(event) => onChange(Number(event.target.value))}
-          className="max-w-[62%] rounded-lg border border-[var(--ink)]/30 bg-[var(--paper-2)] px-2 py-1 font-mono text-[11px] text-[var(--ink)]"
-        >
-          {scenes.map((option, optionIndex) => (
-            <option key={option.id} value={optionIndex}>{dateLabel(option)}</option>
-          ))}
-        </select>
+    <article className="overflow-hidden rounded-[22px] border border-white/10 bg-[#08282e] shadow-[0_18px_55px_rgba(6,32,37,0.28)]">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+        <span className="font-mono text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#a9d6c4]">{label}</span>
+        {scenes.length > 0 ? (
+          <select
+            aria-label={`${label} Sentinel-1 acquisition`}
+            value={index}
+            onChange={(event) => onChange(Number(event.target.value))}
+            className="max-w-[62%] rounded-xl border border-white/15 bg-[#123b40] px-3 py-1.5 font-mono text-[11px] font-bold text-white outline-none focus:border-[#9ac6ac]"
+          >
+            {scenes.map((option, optionIndex) => (
+              <option key={option.id} value={optionIndex}>{dateLabel(option)}</option>
+            ))}
+          </select>
+        ) : (
+          <span className="font-mono text-[10px] font-bold text-[#d4e8db]">Vembanad</span>
+        )}
       </div>
-      <div className="relative h-[360px] bg-[#dce6dc]">
-        {scene && <MapScene scene={scene} />}
+      <div className="relative h-[360px] border-t border-white/10 bg-[#0b3035]">
+        <MapScene scene={scene} />
         {scene && (
           <a
             href={scene.item_url || STUDY_URL}
             target="_blank"
             rel="noreferrer"
-            className="absolute bottom-2 left-2 rounded-lg border border-[var(--ink)]/30 bg-[var(--paper)]/95 px-2 py-1 font-mono text-[10px] font-bold text-[var(--backwater)] underline underline-offset-2"
+            className="absolute bottom-3 left-3 rounded-lg border border-white/20 bg-[#08282e]/85 px-2.5 py-1.5 font-mono text-[9px] font-bold uppercase tracking-wide text-white underline underline-offset-2 backdrop-blur-sm"
           >
             Sentinel-1 RTC · {scene.relative_orbit}
           </a>
@@ -163,12 +223,13 @@ export const MapView: React.FC = () => {
 
   return (
     <section className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3 px-1">
-        <h1 className="font-display text-2xl font-black text-[var(--ink)] md:text-3xl">
-          വേമ്പനാട് · Sentinel‑1
-        </h1>
-        <span className="font-mono text-[10px] font-bold uppercase tracking-wide text-[var(--ink-soft)]">
-          {acquisitionCount} acquisitions · 12 months
+      <div className="flex flex-wrap items-end justify-between gap-3 rounded-[22px] bg-[#092a30] px-5 py-4 text-white shadow-[0_14px_40px_rgba(8,42,48,0.2)] md:px-6">
+        <div>
+          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-[#9ac6ac]">Vembanad · Kerala</p>
+          <h1 className="mt-1 font-display text-2xl font-black md:text-3xl">Sentinel‑1 radar</h1>
+        </div>
+        <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 font-mono text-[10px] font-bold text-[#d4e8db]">
+          {acquisitionCount} scenes · past year
         </span>
       </div>
 
@@ -179,12 +240,14 @@ export const MapView: React.FC = () => {
         </p>
       )}
 
-      {scenes.length > 0 && (
+      {scenes.length > 1 && (
         <div className="grid gap-3 lg:grid-cols-2">
           {renderComparison('Earlier', earlierScene, earlierIndex, setEarlierIndex)}
           {renderComparison('Later', laterScene, laterIndex, setLaterIndex)}
         </div>
       )}
+      {scenes.length === 1 && renderComparison('Latest acquisition', scenes[0], 0, () => {})}
+      {scenes.length === 0 && renderComparison('Satellite view', null, 0, () => {})}
 
       <p className="px-1 text-xs text-[var(--ink-soft)]">
         Sentinel‑1 RTC scenes · no current hyacinth classification
